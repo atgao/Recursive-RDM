@@ -1,5 +1,7 @@
 import networkx as nx
 import numpy as np
+from tqdm import tqdm 
+from timer import Timer
 
 def convert_binary_to_graph(bits, n):
 	'''
@@ -11,6 +13,7 @@ def convert_binary_to_graph(bits, n):
 	row, col, count = 0, 1, n-1
 	
 	for b in bits:
+		# print(row, col, count, n)
 		G[row, col] = int(b) - int("0")
 		G[col, row] = ~G[row, col] # careful of this, 2s complement!!
 
@@ -19,7 +22,7 @@ def convert_binary_to_graph(bits, n):
 		if col > count:
 			row += 1
 			col = row + 1 
-			count -= 1
+			# count -= 1
 	return G
 
 def calculate_prob(bits, G, n, ht={}):
@@ -51,14 +54,11 @@ def calculate_prob(bits, G, n, ht={}):
 
 		if res == "0":
 			elim = u
-			# temp_G = np.delete(G, u, 0)
-			# new_G = np.delete(temp_G, u, 1)
 		else:
 			elim = v
-			# temp_G = np.delete(G, v, 0)
-			# new_G = np.delete(temp_G, v, 1)'
 		
 		# eliminate the node 
+		# print("in match %d w n=%d, which is %d vs %d, %d eliminated" %(i, n, u, v, elim))
 		temp_G = np.delete(G, elim, 0)
 		new_G = np.delete(temp_G, elim, 1)
 
@@ -66,20 +66,23 @@ def calculate_prob(bits, G, n, ht={}):
 		new_bits = "".join(x[i] for i in new_G[triu_inds])
 	
 		# first check ht
-		ht[new_bits] = calculate_prob(new_bits, new_G, n-1, ht)
+		if not new_bits in ht:
+			# print("FIRST TIME CALLING ", new_bits)
+			ht[new_bits] = calculate_prob(new_bits, new_G, n-1, ht)
 
 		# update the probability array with these probabilities
+		# print(ht[new_bits] )
 		prob[inds != elim] += 1/m * ht[new_bits]
 		
 		col += 1
 		if col > count:
 			row += 1
 			col = row + 1 
-			count -= 1
+			# count -= 1
 
 	ht[bits] = prob
-	print("-------------------")
-	pass
+	# print("-------------------")
+	return prob
 
 def generate_graphs(n):
 	'''
@@ -93,16 +96,26 @@ def generate_graphs(n):
 if __name__ == "__main__":
 	x = generate_graphs(2)
 	y = generate_graphs(3)
+	z = generate_graphs(4)
+
+
+	n = 4
+	graphs = generate_graphs(n)
 
 	ht = {}
+	time = Timer()
+
+	for bitgraph in tqdm(graphs):
+		time.tic()
+		print(bitgraph)
+		G = convert_binary_to_graph(bitgraph, n)
+		calculate_prob(bitgraph, G, n, ht)
+		time.toc()
 	
-	# for graph in x:
-	# 	ht[graph] = calculate_prob(graph, 2)
-	
-	for bitgraph in y:
-		G = convert_binary_to_graph(bitgraph, 3)
-		calculate_prob(bitgraph, G, 3, ht)
 		
 	# convert_binary_to_graph(y[1], 3)
 	for k, v in ht.items():
 		print(k, v)
+	print(len(ht))
+	print("AVG TIME: %f" %time.average_time)
+	print("Total Time: %f" %time.total_time)
