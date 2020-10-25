@@ -123,30 +123,36 @@ def get_manipulability(n, ht, s=3):
 		G = convert_binary_to_graph(bits, n)
 
 		cur = ht[bits] # the current probability
+		# print("current graph: ", bits)
 		for subset in subsets:
+			# print("subset ", subset)
 			for sb in subset_bitgraphs: # tries all possible manipulations
 				# need to set the matches here..
+				# print("on manipulation: ", sb)
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches
 				for match in sb:
 					if int(match) == 1: 
 						u, v = subset[i], subset[j]
 						idx = get_idx_for_match(u, v, n)
+						# print("u: %d vs v: %d at idx: %d"%(u, v, idx))
 						if manipulation[idx] == "0":
 							manipulation[idx] = "1"
 						else:
 							manipulation[idx] = "0"
-
+					j += 1
 					if j > count:
 						i += 1
 						j = i + 1 
 
 				# now get new prob
+				# print("manipulated graph: ", manipulation)
 				new_prob = ht["".join(manipulation)]
 				diff = cur[list(subset)] - new_prob[list(subset)]
-				gain = np.sum(diff)
+				gain = np.sum(diff) # np.max instead??
 				if gain > maxGain:
 					maxGain = gain
+			# print("--------")
 	return maxGain
 
 
