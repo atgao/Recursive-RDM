@@ -1,7 +1,29 @@
 import networkx as nx
 import numpy as np
+import argparse
+import itertools
+
 from tqdm import tqdm 
 from timer import Timer
+
+
+def get_idx_for_match(u, v, n):
+
+	# find starting position
+	starting_pos = 0
+	for i in range(u):
+		starting_pos += n - i - 1
+
+	idx = starting_pos + v - u - 1
+	return idx
+
+# TODO: you should probably write this function later...
+def idx_to_match(idx, n):
+	u, v = 0, 1
+	match_idx = 0
+	while match_idx < idx:
+		pass 
+	pass 
 
 def convert_binary_to_graph(bits, n):
 	'''
@@ -9,11 +31,10 @@ def convert_binary_to_graph(bits, n):
 	displays results for representation
 	'''
 	G = np.identity(n, dtype=np.bool_)
-	# for b in bits:
+
 	row, col, count = 0, 1, n-1
 	
 	for b in bits:
-		# print(row, col, count, n)
 		G[row, col] = int(b) - int("0")
 		G[col, row] = ~G[row, col] # careful of this, 2s complement!!
 
@@ -22,7 +43,6 @@ def convert_binary_to_graph(bits, n):
 		if col > count:
 			row += 1
 			col = row + 1 
-			# count -= 1
 	return G
 
 def calculate_prob(bits, G, n, ht={}):
@@ -50,8 +70,6 @@ def calculate_prob(bits, G, n, ht={}):
 		u, v = row, col 
 		res = bits[i]
 
-		# print(u, v, "res: %s" % res)
-
 		if res == "0":
 			elim = u
 		else:
@@ -63,25 +81,21 @@ def calculate_prob(bits, G, n, ht={}):
 		new_G = np.delete(temp_G, elim, 1)
 
 		triu_inds = np.triu_indices(n-1, 1)
-		new_bits = "".join(x[i] for i in new_G[triu_inds])
+		new_bits = "".join(str(i) for i in new_G[triu_inds].astype("uint8"))
 	
 		# first check ht
 		if not new_bits in ht:
-			# print("FIRST TIME CALLING ", new_bits)
 			ht[new_bits] = calculate_prob(new_bits, new_G, n-1, ht)
 
 		# update the probability array with these probabilities
-		# print(ht[new_bits] )
 		prob[inds != elim] += 1/m * ht[new_bits]
 		
 		col += 1
 		if col > count:
 			row += 1
 			col = row + 1 
-			# count -= 1
 
 	ht[bits] = prob
-	# print("-------------------")
 	return prob
 
 def generate_graphs(n):
@@ -92,14 +106,56 @@ def generate_graphs(n):
 	e = int(n*(n-1)/2)
 	return [np.binary_repr(i, width=e) for i in range(2**e)]
 
+def get_manipulability(n, ht, s=3):
+	inds = np.arange(n)
+	subsets = list(itertools.combinations(inds, s)) 
+	
+	# current graphs for n
+	bitgraphs = generate_graphs(n)
+
+	# ways the subset can manipulate 
+	subset_bitgraphs = generate_graphs(s)[1:]
+	count = s-1
+
+	maxGain = float('-inf')
+
+	for bits in bitgraphs:
+		G = convert_binary_to_graph(bits, n)
+
+		cur = ht[bits] # the current probability
+		for subset in subsets:
+			for sb in subset_bitgraphs: # tries all possible manipulations
+				# need to set the matches here..
+				manipulation = list(bits)
+				i, j = 0, 1 # keep track of which indices so can access matches
+				for match in sb:
+					if int(match) == 1: 
+						u, v = subset[i], subset[j]
+						idx = get_idx_for_match(u, v, n)
+						if manipulation[idx] == "0":
+							manipulation[idx] = "1"
+						else:
+							manipulation[idx] = "0"
+
+					if j > count:
+						i += 1
+						j = i + 1 
+
+				# now get new prob
+				new_prob = ht["".join(manipulation)]
+				diff = cur[list(subset)] - new_prob[list(subset)]
+				gain = np.sum(diff)
+				if gain > maxGain:
+					maxGain = gain
+	return maxGain
+
 
 if __name__ == "__main__":
-	x = generate_graphs(2)
-	y = generate_graphs(3)
-	z = generate_graphs(4)
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-n', type=int, default=4)
+	args = parser.parse_args()
 
-
-	n = 4
+	n = args.n
 	graphs = generate_graphs(n)
 
 	ht = {}
@@ -107,15 +163,16 @@ if __name__ == "__main__":
 
 	for bitgraph in tqdm(graphs):
 		time.tic()
-		print(bitgraph)
+		# print(bitgraph)
 		G = convert_binary_to_graph(bitgraph, n)
 		calculate_prob(bitgraph, G, n, ht)
 		time.toc()
 	
-		
-	# convert_binary_to_graph(y[1], 3)
-	for k, v in ht.items():
-		print(k, v)
+	# for k, v in ht.items():
+	# 	print(k, v)
 	print(len(ht))
 	print("AVG TIME: %f" %time.average_time)
 	print("Total Time: %f" %time.total_time)
+
+	gain = get_manipulability(n, ht)
+	print(gain)
