@@ -120,7 +120,7 @@ def get_manipulability(n, ht, s=3):
 	maxGain = float('-inf')
 
 	for bits in bitgraphs:
-		G = convert_binary_to_graph(bits, n)
+		# G = convert_binary_to_graph(bits, n)
 
 		cur = ht[bits] # the current probability
 		# print("current graph: ", bits)
@@ -151,9 +151,22 @@ def get_manipulability(n, ht, s=3):
 				diff = cur[list(subset)] - new_prob[list(subset)]
 				gain = np.sum(diff) # np.max instead??
 				if gain > maxGain:
+					print("updating on manip: ", manipulation)
+					print("with gain ", diff)
 					maxGain = gain
 			# print("--------")
 	return maxGain
+
+def check_permutation(bg1, bg2, n):
+	G1 = convert_binary_to_graph(bg1, n)
+	G2 = convert_binary_to_graph(bg2, n)
+
+	# same graphs have equal # in/out 
+	# graphs for each node
+	sum1 = np.sort(np.sum(G1, axis=0))
+	sum2 = np.sort(np.sum(G2, axis=0))
+
+	return np.all(sum1 == sum2)
 
 
 if __name__ == "__main__":
@@ -163,6 +176,8 @@ if __name__ == "__main__":
 
 	n = args.n
 	graphs = generate_graphs(n)
+	print("finished generating graphs")
+
 
 	ht = {}
 	time = Timer()
@@ -174,11 +189,11 @@ if __name__ == "__main__":
 		calculate_prob(bitgraph, G, n, ht)
 		time.toc()
 	
-	# for k, v in ht.items():
-	# 	print(k, v)
+	for k, v in ht.items():
+		print(k, v)
 	print(len(ht))
 	print("AVG TIME: %f" %time.average_time)
 	print("Total Time: %f" %time.total_time)
 
-	gain = get_manipulability(n, ht)
-	print(gain)
+	# gain = get_manipulability(n, ht)
+	# print(gain)
