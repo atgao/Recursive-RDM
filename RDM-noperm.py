@@ -6,46 +6,8 @@ import itertools
 import collections
 
 from tqdm import tqdm 
-from timer import Timer
-
-
-def get_idx_for_match(u, v, n):
-
-	# find starting position
-	starting_pos = 0
-	for i in range(u):
-		starting_pos += n - i - 1
-
-	idx = starting_pos + v - u - 1
-	return idx
-
-# TODO: you should probably write this function later...
-def idx_to_match(idx, n):
-	u, v = 0, 1
-	match_idx = 0
-	while match_idx < idx:
-		pass 
-	pass 
-
-def convert_binary_to_graph(bits, n):
-	'''
-	converts bits to graph and 
-	displays results for representation
-	'''
-	G = np.identity(n, dtype=np.bool_)
-
-	row, col, count = 0, 1, n-1
-	
-	for b in bits:
-		G[row, col] = int(b) - int("0")
-		G[col, row] = ~G[row, col] # careful of this, 2s complement!!
-
-		col += 1
-
-		if col > count:
-			row += 1
-			col = row + 1 
-	return G
+from utils.graph_utils import *
+from utils.timer import Timer
 
 def calculate_prob(bits, G, n, ht={}):
 	'''
@@ -100,27 +62,6 @@ def calculate_prob(bits, G, n, ht={}):
 	ht[bits] = prob
 	return prob
 
-def generate_graphs(n):
-	'''
-	n: number of nodes in graph
-	return: list of all possible directed graphs
-	'''
-	e = int(n*(n-1)/2)
-	# graphs = []
-	# nodes = {}
-
-	# for i in range(2**e):
-	# 	bitgraph = np.binary_repr(i, width=e)
-	# 	G = convert_binary_to_graph(bitgraph, n)
-
-	# 	key = tuple(np.sort(np.sum(G, axis=0)))
-
-	# 	if key not in nodes:
-	# 		print("adding ... ", bitgraph, key)
-	# 		nodes[key] = True
-	# 		graphs.append(bitgraph)
-	return [np.binary_repr(i, width=e) for i in range(2**e)]
-
 def get_manipulability(graphs, n, ht, s=3):
 	inds = np.arange(n)
 	subsets = list(itertools.combinations(inds, s)) 
@@ -162,35 +103,6 @@ def get_manipulability(graphs, n, ht, s=3):
 				if gain > maxGain:
 					maxGain = gain
 	return maxGain
-
-def check_permutation(bg1, bg2, n):
-	G1 = convert_binary_to_graph(bg1, n)
-	G2 = convert_binary_to_graph(bg2, n)
-
-	# same graphs have equal # in/out 
-	# graphs for each node
-	sum1 = np.sort(np.sum(G1, axis=0))
-	sum2 = np.sort(np.sum(G2, axis=0))
-	return np.all(sum1 == sum2)
-
-def permute_probs(bg1, bg2, prob, n):
-	G1 = convert_binary_to_graph(bg1, n)
-	G2 = convert_binary_to_graph(bg2, n)
-
-	sum1 = np.sum(G1, axis=0)
-	sum2 = np.sum(G2, axis=0)
-
-	new_prob = np.zeros((n), dtype=np.float32)
-
-	for i in range(n):
-		if sum1[i] == sum2[i]:
-			new_prob[i] = prob[i]
-		else:
-			# get first occurence
-			idx = np.where(sum1 == sum2[i])[0][0]
-			new_prob[i] = prob[idx]
-
-	return new_prob
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
