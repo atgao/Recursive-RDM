@@ -106,20 +106,20 @@ def generate_graphs(n):
 	return: list of all possible directed graphs
 	'''
 	e = int(n*(n-1)/2)
-	graphs = []
-	nodes = {}
+	# graphs = []
+	# nodes = {}
 
-	for i in range(2**e):
-		bitgraph = np.binary_repr(i, width=e)
-		G = convert_binary_to_graph(bitgraph, n)
+	# for i in range(2**e):
+	# 	bitgraph = np.binary_repr(i, width=e)
+	# 	G = convert_binary_to_graph(bitgraph, n)
 
-		key = tuple(np.sort(np.sum(G, axis=0)))
+	# 	key = tuple(np.sort(np.sum(G, axis=0)))
 
-		if key not in nodes:
-			print("adding ... ", bitgraph, key)
-			nodes[key] = True
-			graphs.append(bitgraph)
-	return graphs
+	# 	if key not in nodes:
+	# 		print("adding ... ", bitgraph, key)
+	# 		nodes[key] = True
+	# 		graphs.append(bitgraph)
+	return [np.binary_repr(i, width=e) for i in range(2**e)]
 
 def get_manipulability(graphs, n, ht, s=3):
 	inds = np.arange(n)
@@ -156,11 +156,6 @@ def get_manipulability(graphs, n, ht, s=3):
 
 				# now get new prob
 				new_key = "".join(manipulation)
-				if ht.get(new_key) is None:
-					for g in bitgraphs:
-						if check_permutation(g, new_key, n):
-							ht[new_key] = permute_probs(g, new_key, ht[g], n)
-							break
 				new_prob = ht[new_key]
 				diff = cur[list(subset)] - new_prob[list(subset)]
 				gain = np.sum(diff) # np.max instead??
@@ -182,31 +177,19 @@ def permute_probs(bg1, bg2, prob, n):
 	G1 = convert_binary_to_graph(bg1, n)
 	G2 = convert_binary_to_graph(bg2, n)
 
-	sum1 = np.sum(G1, axis=1)
-	sum2 = np.sum(G2, axis=1)
+	sum1 = np.sum(G1, axis=0)
+	sum2 = np.sum(G2, axis=0)
 
 	new_prob = np.zeros((n), dtype=np.float32)
-
-	print(bg1, bg2)
-	print(sum1, sum2, prob)
 
 	for i in range(n):
 		if sum1[i] == sum2[i]:
 			new_prob[i] = prob[i]
 		else:
 			# get first occurence
-			idx = np.where(sum1 == sum2[i])[0]
-			print(idx, i)
-			if len(idx) > 1:	
-				idx = idx[idx >= i][0]
-				print("need to get first", idx, i)
-			# print(idx, i)
-			# print(idx >= i)
-			
-			# print(idx)
-			# print("-------")
+			idx = np.where(sum1 == sum2[i])[0][0]
 			new_prob[i] = prob[idx]
-	print("---------------")
+
 	return new_prob
 
 if __name__ == "__main__":
