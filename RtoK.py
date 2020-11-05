@@ -10,57 +10,46 @@ from utils.graph_utils import *
 from utils.timer import Timer
 
 def calculate_prob(bits, G, n, ht={}):
-	'''
-	params: G: graph
-			n: number of nodes
-	'''
-	# TODO: look up equivalent graphs??
+    '''
+    params: G: graph
+            n: number of nodes
+    '''
+    # need to calculate probability for each node 
 
-	# need to calculate probability for each node 
-	m = int(n*(n-1)/2) # total number of matches
+    # print("Calculating prob for %s with n = %d" % (bits, n))
+    if n == 2:
+        if int(bits, 2) == 0:
+            return np.array([0, 1])
+        else:
+            return np.array([1, 0])
 
-	# print("Calculating prob for %s with n = %d" % (bits, n))
-	if n == 2:
-		if int(bits, 2) == 0:
-			return np.array([0, 1])
-		else:
-			return np.array([1, 0])
+    # get probability each node is not eliminated this round
+    prob = np.zeros((n), dtype=np.float32)
+    print(G)
+    # go through each node and play them
+    for i in range(n):
+        round = G[i]
+        keep = ~round 
 
-	# get probability each node is not eliminated this round
-	prob = np.zeros((n), dtype=np.float32)
+        if np.all(round):
+            keep[i] = True
 
-	row, col, count = 0, 1, n-1
-	inds = np.arange(n)
-	for i in range(m):
-		u, v = row, col 
-		res = bits[i]
+        # determine which nodes to eliminate
+        new_G = G[keep, :][:, keep]
 
-		if res == "0":
-			elim = u
-		else:
-			elim = v
-		
-		# eliminate the node 
-		temp_G = np.delete(G, elim, 0)
-		new_G = np.delete(temp_G, elim, 1)
+        if new_G.shape[0] == 1:
+            prob[keep] += 1.0/n 
+            continue
 
-		triu_inds = np.triu_indices(n-1, 1)
-		new_bits = "".join(str(i) for i in new_G[triu_inds].astype("uint8"))
-	
-		# first check ht
-		if not new_bits in ht:
-			ht[new_bits] = calculate_prob(new_bits, new_G, n-1, ht)
+        triu_inds = np.triu_indices(new_G.shape[0], 1)
+        new_bits = "".join(str(i) for i in new_G[triu_inds].astype("uint8"))
+        if not new_bits in ht:
+            ht[new_bits] = calculate_prob(new_bits, new_G, new_G.shape[0], ht)
+        prob[keep] += 1.0/n * ht[new_bits]
 
-		# update the probability array with these probabilities
-		prob[inds != elim] += 1.0/m * ht[new_bits]
-		
-		col += 1
-		if col > count:
-			row += 1
-			col = row + 1 
-
-	ht[bits] = prob
-	return prob
+    print("*******************************")
+    ht[bits] = prob
+    return prob
 
 def get_manipulability(graphs, n, ht, s=3):
 	inds = np.arange(n)
@@ -134,5 +123,5 @@ if __name__ == "__main__":
 	print("AVG TIME: %f" %time.average_time)
 	print("Total Time: %f" %time.total_time)
 
-	gain = get_manipulability(graphs, n, ht)
-	print(gain)
+	# gain = get_manipulability(graphs, n, ht)
+	# print(gain)
