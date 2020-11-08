@@ -62,9 +62,10 @@ def calculate_prob(bits, G, n, ht={}):
 	ht[bits] = prob
 	return prob
 
-def get_manipulability(graphs, n, ht, s=3):
+def get_manipulability(graphs, n, ht, s=3, subsets=None):
 	inds = np.arange(n)
-	subsets = list(itertools.combinations(inds, s)) 
+	if subsets is None:
+		subsets = list(itertools.combinations(inds, s)) 
 	
 	# current graphs for n
 	bitgraphs = graphs
@@ -104,6 +105,62 @@ def get_manipulability(graphs, n, ht, s=3):
 					maxGain = gain
 	return maxGain
 
+def get_2R_bound(graphs, n, ht, s=3):
+	inds = np.arange(n)
+	subsets = list(itertools.combinations(inds, s)) 
+
+	# ways the subset can manipulate 
+	subset_bitgraphs = generate_graphs(s-1)[1:]
+	count = s-2
+
+	maxGain = float('-inf')
+	# current graphs for n
+	bitgraphs = graphs
+	for bits in bitgraphs:
+		G = convert_binary_to_graph(bits, n)
+		for subset in subsets[:1]:
+			for u in subset:
+				elim = u 
+
+				temp_G = np.delete(G, elim, 0)
+				new_G = np.delete(temp_G, elim, 1)
+
+				triu_inds = np.triu_indices(n-1, 1)
+				new_bits = "".join(str(i) for i in new_G[triu_inds].astype("uint8"))
+
+				colluding = list(subset)
+				colluding.remove(u)
+
+				cur = ht[new_bits]
+				for sb in subset_bitgraphs: # tries all possible manipulations
+					# need to set the matches here..
+					manipulation = list(new_bits)
+					i, j = 0, 1 # keep track of which indices so can access matches
+					for match in sb:
+						if int(match) == 1: 
+							u, v = colluding[i], colluding[j]
+							idx = get_idx_for_match(u, v, n-1)
+							if manipulation[idx] == "0":
+								manipulation[idx] = "1"
+							else:
+								manipulation[idx] = "0"
+						j += 1
+						if j > count:
+							i += 1
+							j = i + 1 
+
+					# now get new prob
+					new_key = "".join(manipulation)
+					new_prob = ht[new_key]
+					diff = cur[list(colluding)] - new_prob[list(colluding)]
+					gain = np.sum(diff) # np.max instead??
+					if gain > maxGain:
+						maxGain = gain
+	
+	print(maxGain)
+
+	pass
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
@@ -135,4 +192,6 @@ if __name__ == "__main__":
 	print("Total Time: %f" %time.total_time)
 
 	gain = get_manipulability(graphs, n, ht)
-	print(gain)
+	print("Total Gain ", gain)
+
+	# get_2R_bound(graphs, n, ht)

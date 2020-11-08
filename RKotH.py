@@ -25,7 +25,6 @@ def calculate_prob(bits, G, n, ht={}):
 
     # get probability each node is not eliminated this round
     prob = np.zeros((n), dtype=np.float32)
-    print(G)
     # go through each node and play them
     for i in range(n):
         round = G[i]
@@ -47,7 +46,6 @@ def calculate_prob(bits, G, n, ht={}):
             ht[new_bits] = calculate_prob(new_bits, new_G, new_G.shape[0], ht)
         prob[keep] += 1.0/n * ht[new_bits]
 
-    print("*******************************")
     ht[bits] = prob
     return prob
 
@@ -123,5 +121,5 @@ if __name__ == "__main__":
 	print("AVG TIME: %f" %time.average_time)
 	print("Total Time: %f" %time.total_time)
 
-	# gain = get_manipulability(graphs, n, ht)
-	# print(gain)
+	gain = get_manipulability(graphs, n, ht)
+	print(gain)
