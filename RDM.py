@@ -6,7 +6,8 @@ import itertools
 import collections
 
 from tqdm import tqdm 
-from timer import Timer
+from utils.graph_utils import *
+from utils.timer import Timer
 
 
 def get_idx_for_match(u, v, n):
@@ -178,36 +179,36 @@ def check_permutation(bg1, bg2, n):
 	sum2 = np.sort(np.sum(G2, axis=0))
 	return np.all(sum1 == sum2)
 
-def permute_probs(bg1, bg2, prob, n):
-	G1 = convert_binary_to_graph(bg1, n)
-	G2 = convert_binary_to_graph(bg2, n)
+# def permute_probs(bg1, bg2, prob, n):
+# 	G1 = convert_binary_to_graph(bg1, n)
+# 	G2 = convert_binary_to_graph(bg2, n)
 
-	sum1 = np.sum(G1, axis=1)
-	sum2 = np.sum(G2, axis=1)
+# 	sum1 = np.sum(G1, axis=1)
+# 	sum2 = np.sum(G2, axis=1)
 
-	new_prob = np.zeros((n), dtype=np.float32)
+# 	new_prob = np.zeros((n), dtype=np.float32)
 
-	print(bg1, bg2)
-	print(sum1, sum2, prob)
+# 	print(bg1, bg2)
+# 	print(sum1, sum2, prob)
 
-	for i in range(n):
-		if sum1[i] == sum2[i]:
-			new_prob[i] = prob[i]
-		else:
-			# get first occurence
-			idx = np.where(sum1 == sum2[i])[0]
-			print(idx, i)
-			if len(idx) > 1:	
-				idx = idx[idx >= i][0]
-				print("need to get first", idx, i)
-			# print(idx, i)
-			# print(idx >= i)
+# 	for i in range(n):
+# 		if sum1[i] == sum2[i]:
+# 			new_prob[i] = prob[i]
+# 		else:
+# 			# get first occurence
+# 			idx = np.where(sum1 == sum2[i])[0]
+# 			print(idx, i)
+# 			if len(idx) > 1:	
+# 				idx = idx[idx >= i][0]
+# 				print("need to get first", idx, i)
+# 			# print(idx, i)
+# 			# print(idx >= i)
 			
-			# print(idx)
-			# print("-------")
-			new_prob[i] = prob[idx]
-	print("---------------")
-	return new_prob
+# 			# print(idx)
+# 			# print("-------")
+# 			new_prob[i] = prob[idx]
+# 	print("---------------")
+# 	return new_prob
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
@@ -215,28 +216,30 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	n = args.n
-	time = Timer()
-	graphs = generate_graphs(n)
-	print("finished generating graphs", len(graphs))
+	# time = Timer()
+	# graphs = generate_graphs(n)
+	# print("finished generating graphs", len(graphs))
 
 
-	ht = {}
-	time = Timer()
+	# ht = {}
+	# time = Timer()
 
-	for bitgraph in tqdm(graphs):
-		time.tic()
-		# print(bitgraph)
-		G = convert_binary_to_graph(bitgraph, n)
-		calculate_prob(bitgraph, G, n, ht)
-		time.toc()
+	# for bitgraph in tqdm(graphs):
+	# 	time.tic()
+	# 	# print(bitgraph)
+	# 	G = convert_binary_to_graph(bitgraph, n)
+	# 	calculate_prob(bitgraph, G, n, ht)
+	# 	time.toc()
 	
-	ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
+	# ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
 
-	for k, v in ht.items():
-		print(k, v)
-	print(len(ht))
-	print("AVG TIME: %f" %time.average_time)
-	print("Total Time: %f" %time.total_time)
+	# for k, v in ht.items():
+	# 	print(k, v)
+	# print(len(ht))
+	# print("AVG TIME: %f" %time.average_time)
+	# print("Total Time: %f" %time.total_time)
 
-	gain = get_manipulability(graphs, n, ht)
-	print(gain)
+	# gain = get_manipulability(graphs, n, ht)
+	# print(gain)
+	prob = permute_probs("000000", "111000", np.array([0.25, 0.5, 0.25, 0]), 4)
+	print(prob)

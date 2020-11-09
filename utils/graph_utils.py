@@ -65,17 +65,19 @@ def permute_probs(bg1, bg2, prob, n):
 	G1 = convert_binary_to_graph(bg1, n)
 	G2 = convert_binary_to_graph(bg2, n)
 
-	sum1 = np.sum(G1, axis=0)
-	sum2 = np.sum(G2, axis=0)
+	perms = list(itertools.permutations(np.arange(n)))[1:]
 
 	new_prob = np.zeros((n), dtype=np.float32)
+	P = np.zeros((n, n), dtype=np.uint8)
+	inds = np.arange(n)
 
+	for perm in perms:
+		P[inds, perm] = 1
+		if np.all(P @ (G1 @ P.T) == G2):
+			break
+		P[inds, perm] = 0 # reset
+	
+	# set the indices 
 	for i in range(n):
-		if sum1[i] == sum2[i]:
-			new_prob[i] = prob[i]
-		else:
-			# get first occurence
-			idx = np.where(sum1 == sum2[i])[0][0]
-			new_prob[i] = prob[idx]
-
+		new_prob[i] = prob[perm[i]]
 	return new_prob

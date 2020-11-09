@@ -11,5 +11,6 @@ Code for senior thesis
 * takes ~ 2.5 hrs to calculate all probabilities on n=7
 * 23767 s --> 6.6 hrs generate all unique graphs on n=7
 * * now 234 s with further optimization
+* probability of each match in RSEB with dummy players ??
 
 73,786,976,294,838,206,464 <--- number of complete graphs for 12
