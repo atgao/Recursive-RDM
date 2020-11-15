@@ -1,4 +1,4 @@
-import networkx as nx
+# import networkx as nx
 import numpy as np
 import argparse
 import itertools
@@ -8,45 +8,6 @@ import collections
 from tqdm import tqdm 
 from utils.graph_utils import *
 from utils.timer import Timer
-
-
-def get_idx_for_match(u, v, n):
-
-	# find starting position
-	starting_pos = 0
-	for i in range(u):
-		starting_pos += n - i - 1
-
-	idx = starting_pos + v - u - 1
-	return idx
-
-# TODO: you should probably write this function later...
-def idx_to_match(idx, n):
-	u, v = 0, 1
-	match_idx = 0
-	while match_idx < idx:
-		pass 
-	pass 
-
-def convert_binary_to_graph(bits, n):
-	'''
-	converts bits to graph and 
-	displays results for representation
-	'''
-	G = np.identity(n, dtype=np.bool_)
-
-	row, col, count = 0, 1, n-1
-	
-	for b in bits:
-		G[row, col] = int(b) - int("0")
-		G[col, row] = ~G[row, col] # careful of this, 2s complement!!
-
-		col += 1
-
-		if col > count:
-			row += 1
-			col = row + 1 
-	return G
 
 def calculate_prob(bits, G, n, ht={}):
 	'''
@@ -101,7 +62,7 @@ def calculate_prob(bits, G, n, ht={}):
 	ht[bits] = prob
 	return prob
 
-def generate_graphs(n):
+def generate_graphs(n, all=False):
 	'''
 	n: number of nodes in graph
 	return: list of all possible directed graphs
@@ -109,6 +70,9 @@ def generate_graphs(n):
 	e = int(n*(n-1)/2)
 	graphs = []
 	nodes = {}
+
+	if all:
+		return [np.binary_repr(i, width=e) for i in range(2**e)]
 
 	for i in range(2**e):
 		bitgraph = np.binary_repr(i, width=e)
@@ -130,12 +94,12 @@ def get_manipulability(graphs, n, ht, s=3):
 	bitgraphs = graphs
 
 	# ways the subset can manipulate 
-	subset_bitgraphs = generate_graphs(s)[1:]
+	subset_bitgraphs = generate_graphs(s, all=True)[1:]
 	count = s-1
 
 	maxGain = float('-inf')
 
-	for bits in bitgraphs:
+	for bits in tqdm(bitgraphs):
 		cur = ht[bits] # the current probability
 		for subset in subsets:
 			for sb in subset_bitgraphs: # tries all possible manipulations
@@ -162,53 +126,22 @@ def get_manipulability(graphs, n, ht, s=3):
 						if check_permutation(g, new_key, n):
 							ht[new_key] = permute_probs(g, new_key, ht[g], n)
 							break
+				# temporary fix...
+				if ht.get(new_key) is None:
+					ht[new_key] = calculate_prob(new_key, convert_binary_to_graph(new_key, n), n, ht)
 				new_prob = ht[new_key]
-				diff = cur[list(subset)] - new_prob[list(subset)]
+				diff = new_prob[list(subset)] - cur[list(subset)] 
 				gain = np.sum(diff) # np.max instead??
 				if gain > maxGain:
+					G = convert_binary_to_graph(bits, n)
+					print("orig: ", bits)
+					print(np.sum(G, axis=1)[list(subset)])
+					G_mod = convert_binary_to_graph(new_key, n)
+					print("new: ", new_key)
+					print(np.sum(G_mod, axis=1)[list(subset)])
+					print("new gain: ", gain)
 					maxGain = gain
 	return maxGain
-
-def check_permutation(bg1, bg2, n):
-	G1 = convert_binary_to_graph(bg1, n)
-	G2 = convert_binary_to_graph(bg2, n)
-
-	# same graphs have equal # in/out 
-	# graphs for each node
-	sum1 = np.sort(np.sum(G1, axis=0))
-	sum2 = np.sort(np.sum(G2, axis=0))
-	return np.all(sum1 == sum2)
-
-# def permute_probs(bg1, bg2, prob, n):
-# 	G1 = convert_binary_to_graph(bg1, n)
-# 	G2 = convert_binary_to_graph(bg2, n)
-
-# 	sum1 = np.sum(G1, axis=1)
-# 	sum2 = np.sum(G2, axis=1)
-
-# 	new_prob = np.zeros((n), dtype=np.float32)
-
-# 	print(bg1, bg2)
-# 	print(sum1, sum2, prob)
-
-# 	for i in range(n):
-# 		if sum1[i] == sum2[i]:
-# 			new_prob[i] = prob[i]
-# 		else:
-# 			# get first occurence
-# 			idx = np.where(sum1 == sum2[i])[0]
-# 			print(idx, i)
-# 			if len(idx) > 1:	
-# 				idx = idx[idx >= i][0]
-# 				print("need to get first", idx, i)
-# 			# print(idx, i)
-# 			# print(idx >= i)
-			
-# 			# print(idx)
-# 			# print("-------")
-# 			new_prob[i] = prob[idx]
-# 	print("---------------")
-# 	return new_prob
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
@@ -216,30 +149,30 @@ if __name__ == "__main__":
 	args = parser.parse_args()
 
 	n = args.n
-	# time = Timer()
-	# graphs = generate_graphs(n)
-	# print("finished generating graphs", len(graphs))
+	time = Timer()
+	graphs = generate_graphs(n)
+	print("finished generating graphs", len(graphs))
 
 
-	# ht = {}
-	# time = Timer()
-
-	# for bitgraph in tqdm(graphs):
-	# 	time.tic()
-	# 	# print(bitgraph)
-	# 	G = convert_binary_to_graph(bitgraph, n)
-	# 	calculate_prob(bitgraph, G, n, ht)
-	# 	time.toc()
+	ht = {}
+	for bitgraph in tqdm(graphs):
+		time.tic()
+		# print(bitgraph)
+		G = convert_binary_to_graph(bitgraph, n)
+		calculate_prob(bitgraph, G, n, ht)
+		time.toc()
 	
-	# ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
+	ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
 
-	# for k, v in ht.items():
-	# 	print(k, v)
-	# print(len(ht))
-	# print("AVG TIME: %f" %time.average_time)
-	# print("Total Time: %f" %time.total_time)
-
-	# gain = get_manipulability(graphs, n, ht)
-	# print(gain)
-	prob = permute_probs("000000", "111000", np.array([0.25, 0.5, 0.25, 0]), 4)
-	print(prob)
+	for k, v in ht.items():
+		print(k, v)
+	print(len(ht))
+	prev_total = time.total_time
+	print("Avg Time: %f sec per graph" %time.average_time)
+	print("Total Time: %f sec" %time.total_time)
+	
+	time.tic()
+	gain = get_manipulability(graphs, n, ht)
+	print("gain: ", gain)
+	time.toc()
+	print("manipulability total time: %f"% (time.total_time - prev_total))

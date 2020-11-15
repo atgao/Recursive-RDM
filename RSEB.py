@@ -81,6 +81,48 @@ def generate_matches(nodes, edges):
 
     return acc
 
+def get_manipulability(graphs, n, ht, s=3):
+	inds = np.arange(n)
+	subsets = list(itertools.combinations(inds, s)) 
+	
+	# current graphs for n
+	bitgraphs = graphs
+
+	# ways the subset can manipulate 
+	subset_bitgraphs = generate_graphs(s)[1:]
+	count = s-1
+
+	maxGain = float('-inf')
+
+	for bits in tqdm(bitgraphs):
+		cur = ht[bits] # the current probability
+		for subset in subsets:
+			for sb in subset_bitgraphs: # tries all possible manipulations
+				# need to set the matches here..
+				manipulation = list(bits)
+				i, j = 0, 1 # keep track of which indices so can access matches
+				for match in sb:
+					if int(match) == 1: 
+						u, v = subset[i], subset[j]
+						idx = get_idx_for_match(u, v, n)
+						if manipulation[idx] == "0":
+							manipulation[idx] = "1"
+						else:
+							manipulation[idx] = "0"
+					j += 1
+					if j > count:
+						i += 1
+						j = i + 1 
+
+				# now get new prob
+				new_key = "".join(manipulation)
+				new_prob = ht[new_key]
+				diff = cur[list(subset)] - new_prob[list(subset)]
+				gain = np.sum(diff) # np.max instead??
+				if gain > maxGain:
+					maxGain = gain
+	return maxGain
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', type=int, default=4)
@@ -107,6 +149,14 @@ if __name__ == "__main__":
     
     for k, v in ht.items():
         print(k, v)
+
     print(len(ht))
-    print("AVG TIME: %f" %time.average_time)
-    print("Total Time: %f" %time.total_time)
+    prev_total = time.total_time
+    print("Avg Time: %f sec per graph" %time.average_time)
+    print("Total Time: %f sec" %time.total_time)
+    
+    time.tic()
+    gain = get_manipulability(graphs, n, ht)
+    time.toc()
+    print("Total gain: ", gain)
+    print("Total Time: %f sec" % time.total_time - prev_total)

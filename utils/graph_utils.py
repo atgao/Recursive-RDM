@@ -1,9 +1,12 @@
-import networkx as nx
+# import networkx as nx
 import numpy as np
 import argparse
 import itertools
 
 import collections
+
+def get_num_edges(n):
+	return int(n*(n-1)/2)
 
 def get_idx_for_match(u, v, n):
 
@@ -55,11 +58,16 @@ def check_permutation(bg1, bg2, n):
 	G1 = convert_binary_to_graph(bg1, n)
 	G2 = convert_binary_to_graph(bg2, n)
 
-	# same graphs have equal # in/out 
-	# graphs for each node
-	sum1 = np.sort(np.sum(G1, axis=0))
-	sum2 = np.sort(np.sum(G2, axis=0))
-	return np.all(sum1 == sum2)
+	perms = list(itertools.permutations(np.arange(n)))[1:]
+	P = np.zeros((n, n), dtype=np.uint8)
+	inds = np.arange(n)
+
+	for perm in perms:
+		P[inds, perm] = 1
+		if np.all(P @ (G1 @ P.T) == G2):
+			return True
+		P[inds, perm] = 0 # reset
+	return False
 
 def permute_probs(bg1, bg2, prob, n):
 	G1 = convert_binary_to_graph(bg1, n)
@@ -81,3 +89,79 @@ def permute_probs(bg1, bg2, prob, n):
 	for i in range(n):
 		new_prob[i] = prob[perm[i]]
 	return new_prob
+
+def generate_sums(n):
+	e = get_num_edges(n)
+	
+	# first ordering always n-1, n-2, n-3....0
+	nums = [i for i in range(1, n)]
+	sums = combinationSum(nums, e, n)
+	return sums
+
+def combinationSum(nums, target, k):
+	res = []
+	nums.sort()
+	def dfs(left, path, idx):
+		if not left and len(path) <= k: res.append(path[::-1])
+		else:
+			for i, val in enumerate(nums[idx:]):
+				if val > left: break
+				if len(path) > 0:
+					if val == nums[-1] and path[-1] == nums[-1]: 
+						break
+				dfs(left - val, path + [val], idx + i)
+	dfs(target, [], 0)
+	return res
+
+def convert_sum_to_binary(sum, n):
+	if len(sum) < n: sum.extend(0 for i in range(n-len(sum)))
+	sum = collections.deque(sum)
+	G = np.identity(n, dtype=np.bool_)
+
+	for i in range(n):
+		wins = np.sum(G[i]) - 1
+		temp = sum.popleft()
+		num = temp - wins
+		remaining = n - i - 1
+
+		count = 0
+		while num > remaining:
+			sum.append(temp)
+			temp = sum.popleft()
+			num = temp - wins 
+			remaining = n - i - 1
+			count += 1
+			if count > len(sum): 
+				# print(i, count, num, remaining)
+				return ""
+
+		# set row
+		G[i][i+1:i+1+num] = ~G[i][i+1:i+1+num]
+		# set col 
+		G[i+1:, i] = ~G[i][i+1:]
+
+	triu_inds = np.triu_indices(n, 1)
+	bits = "".join(str(i) for i in G[triu_inds].astype("uint8"))
+
+	return bits
+
+
+if __name__ == "__main__":
+	parser = argparse.ArgumentParser()
+	parser.add_argument('-n', type=int, default=4)
+	args = parser.parse_args()
+
+	n = args.n
+
+	sums = generate_sums(n)
+	print(sums, len(sums))
+	bitgraphs = []
+
+	for sum in sums:
+		bitgraphs.append(convert_sum_to_binary(sum, n))
+	
+	count = 0
+	for sum, bit in zip(sums, bitgraphs):
+		if bit != "": count += 1
+		print(sum, bit)
+	print("Total for %d graphs: %d " % (n, count))

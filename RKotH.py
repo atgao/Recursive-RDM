@@ -62,7 +62,7 @@ def get_manipulability(graphs, n, ht, s=3):
 
 	maxGain = float('-inf')
 
-	for bits in bitgraphs:
+	for bits in tqdm(bitgraphs):
 		cur = ht[bits] # the current probability
 		for subset in subsets:
 			for sb in subset_bitgraphs: # tries all possible manipulations
@@ -117,9 +117,10 @@ if __name__ == "__main__":
 
 	for k, v in ht.items():
 		print(k, v)
-	print(len(ht))
-	print("AVG TIME: %f" %time.average_time)
-	print("Total Time: %f" %time.total_time)
 
-	gain = get_manipulability(graphs, n, ht)
-	print(gain)
+	print(len(ht))
+	print("Avg Time: %f sec per graph" %time.average_time)
+	print("Total Time: %f sec" %time.total_time)
+	
+	gain = get_manipulability(graphs, n, ht, s=2)
+	print("Total gain: ", gain)

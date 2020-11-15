@@ -99,7 +99,7 @@ def get_manipulability(graphs, n, ht, s=3, subsets=None):
 				# now get new prob
 				new_key = "".join(manipulation)
 				new_prob = ht[new_key]
-				diff = cur[list(subset)] - new_prob[list(subset)]
+				diff = new_prob[list(subset)] - cur[list(subset)] 
 				gain = np.sum(diff) # np.max instead??
 				if gain > maxGain:
 					maxGain = gain
@@ -191,7 +191,7 @@ if __name__ == "__main__":
 	print("AVG TIME: %f" %time.average_time)
 	print("Total Time: %f" %time.total_time)
 
-	gain = get_manipulability(graphs, n, ht)
+	gain = get_manipulability(graphs, n, ht, s=2)
 	print("Total Gain ", gain)
 
 	# get_2R_bound(graphs, n, ht)
