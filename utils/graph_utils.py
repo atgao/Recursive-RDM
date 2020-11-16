@@ -4,6 +4,7 @@ import argparse
 import itertools
 
 import collections
+from tqdm import tqdm 
 
 def get_num_edges(n):
 	return int(n*(n-1)/2)
@@ -51,8 +52,14 @@ def generate_graphs(n):
 	n: number of nodes in graph
 	return: list of all possible directed graphs
 	'''
-	e = int(n*(n-1)/2)
-	return [np.binary_repr(i, width=e) for i in range(2**e)]
+	sums = generate_sums(n)
+	bitgraphs = []
+
+	for sum in sums:
+		bit = convert_sum_to_binary(sum, n)
+		if bit != "":
+			bitgraphs.append(bit)
+	return bitgraphs
 
 def check_permutation(bg1, bg2, n):
 	G1 = convert_binary_to_graph(bg1, n)
@@ -145,6 +152,91 @@ def convert_sum_to_binary(sum, n):
 
 	return bits
 
+def get_all_graphs(n, s=3):
+	bitgraphs = generate_graphs(n)
+	res = []
+	res.extend(bitgraphs)
+	manip = []
+
+	inds = np.arange(n)
+	subsets = list(itertools.combinations(inds, s))
+
+	if s == 2:
+		subset_bitgraphs = generate_graphs(s)
+	else:
+		subset_bitgraphs = generate_graphs(s)[1:]
+	count = s-1
+
+	for bits in bitgraphs:
+		for subset in subsets:
+			for sb in subset_bitgraphs:
+				manipulation = list(bits)
+				i, j = 0, 1 # keep track of which indices so can access matches
+				for match in sb:
+					if int(match) == 1: 
+						u, v = subset[i], subset[j]
+						idx = get_idx_for_match(u, v, n)
+						if manipulation[idx] == "0":
+							manipulation[idx] = "1"
+						else:
+							manipulation[idx] = "0"
+					j += 1
+					if j > count:
+						i += 1
+						j = i + 1 
+
+				# now get new prob
+				new_key = "".join(manipulation)
+				manip.append(new_key)
+	# print(res)
+	# print(2**get_num_edges(n), len(res), len(bitgraphs)) # comparison of how much we r saving
+	return res, manip
+
+def get_manipulability(graphs, n, ht, s=3):
+	inds = np.arange(n)
+	subsets = list(itertools.combinations(inds, s)) 
+	
+	# current graphs for n
+	bitgraphs = graphs
+
+	# ways the subset can manipulate 
+	if s == 2:
+		subset_bitgraphs = generate_graphs(s)
+	else:
+		subset_bitgraphs = generate_graphs(s)[1:]
+	count = s-1
+
+	maxGain = float('-inf')
+
+	for bits in tqdm(bitgraphs):
+		cur = ht[bits] # the current probability
+		for subset in subsets:
+			for sb in subset_bitgraphs: # tries all possible manipulations
+				# need to set the matches here..
+				manipulation = list(bits)
+				i, j = 0, 1 # keep track of which indices so can access matches
+				for match in sb:
+					if int(match) == 1: 
+						u, v = subset[i], subset[j]
+						idx = get_idx_for_match(u, v, n)
+						if manipulation[idx] == "0":
+							manipulation[idx] = "1"
+						else:
+							manipulation[idx] = "0"
+					j += 1
+					if j > count:
+						i += 1
+						j = i + 1 
+
+				# now get new prob
+				new_key = "".join(manipulation)
+				
+				new_prob = ht[new_key]
+				diff = new_prob[list(subset)] - cur[list(subset)] 
+				gain = np.sum(diff) # np.max instead??
+				if gain > maxGain:
+					maxGain = gain
+	return maxGain
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
@@ -153,15 +245,16 @@ if __name__ == "__main__":
 
 	n = args.n
 
-	sums = generate_sums(n)
-	print(sums, len(sums))
-	bitgraphs = []
+	# sums = generate_sums(n)
+	# print(sums, len(sums))
+	# bitgraphs = []
 
-	for sum in sums:
-		bitgraphs.append(convert_sum_to_binary(sum, n))
+	# for sum in sums:
+	# 	bitgraphs.append(convert_sum_to_binary(sum, n))
 	
-	count = 0
-	for sum, bit in zip(sums, bitgraphs):
-		if bit != "": count += 1
-		print(sum, bit)
-	print("Total for %d graphs: %d " % (n, count))
+	# count = 0
+	# for sum, bit in zip(sums, bitgraphs):
+	# 	if bit != "": count += 1
+	# 	print(sum, bit)
+	# print("Total for %d graphs: %d " % (n, count))
+	get_all_graphs(n)

@@ -49,65 +49,23 @@ def calculate_prob(bits, G, n, ht={}):
     ht[bits] = prob
     return prob
 
-def get_manipulability(graphs, n, ht, s=3):
-	inds = np.arange(n)
-	subsets = list(itertools.combinations(inds, s)) 
-	
-	# current graphs for n
-	bitgraphs = graphs
-
-	# ways the subset can manipulate 
-	subset_bitgraphs = generate_graphs(s)[1:]
-	count = s-1
-
-	maxGain = float('-inf')
-
-	for bits in tqdm(bitgraphs):
-		cur = ht[bits] # the current probability
-		for subset in subsets:
-			for sb in subset_bitgraphs: # tries all possible manipulations
-				# need to set the matches here..
-				manipulation = list(bits)
-				i, j = 0, 1 # keep track of which indices so can access matches
-				for match in sb:
-					if int(match) == 1: 
-						u, v = subset[i], subset[j]
-						idx = get_idx_for_match(u, v, n)
-						if manipulation[idx] == "0":
-							manipulation[idx] = "1"
-						else:
-							manipulation[idx] = "0"
-					j += 1
-					if j > count:
-						i += 1
-						j = i + 1 
-
-				# now get new prob
-				new_key = "".join(manipulation)
-				new_prob = ht[new_key]
-				diff = cur[list(subset)] - new_prob[list(subset)]
-				gain = np.sum(diff) # np.max instead??
-				if gain > maxGain:
-					maxGain = gain
-	return maxGain
-
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
+	parser.add_argument('-s', type=int, default=3)
 	args = parser.parse_args()
 
-	n = args.n
+	n, s = args.n, args.s
 	time = Timer()
-	graphs = generate_graphs(n)
-	print("finished generating graphs", len(graphs))
+	graphs, manip = get_all_graphs(n, s)
+	print("Finished generating graphs")
+	print("%d unique graphs, %d manipulated graphs" % (len(graphs), len(manip)))
 
 
 	ht = {}
 	time = Timer()
-
-	for bitgraph in tqdm(graphs):
+	for bitgraph in tqdm(graphs+manip):
 		time.tic()
-		# print(bitgraph)
 		G = convert_binary_to_graph(bitgraph, n)
 		calculate_prob(bitgraph, G, n, ht)
 		time.toc()
@@ -115,12 +73,12 @@ if __name__ == "__main__":
 	# ordering for convience sake
 	ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
 
-	for k, v in ht.items():
-		print(k, v)
+	# for k, v in ht.items():
+	# 	print(k, v)
 
-	print(len(ht))
+	print("%d entries in table" % len(ht))
 	print("Avg Time: %f sec per graph" %time.average_time)
 	print("Total Time: %f sec" %time.total_time)
 	
-	gain = get_manipulability(graphs, n, ht, s=2)
+	gain = get_manipulability(graphs, n, ht, s=s)
 	print("Total gain: ", gain)

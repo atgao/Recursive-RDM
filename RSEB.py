@@ -81,54 +81,13 @@ def generate_matches(nodes, edges):
 
     return acc
 
-def get_manipulability(graphs, n, ht, s=3):
-	inds = np.arange(n)
-	subsets = list(itertools.combinations(inds, s)) 
-	
-	# current graphs for n
-	bitgraphs = graphs
-
-	# ways the subset can manipulate 
-	subset_bitgraphs = generate_graphs(s)[1:]
-	count = s-1
-
-	maxGain = float('-inf')
-
-	for bits in tqdm(bitgraphs):
-		cur = ht[bits] # the current probability
-		for subset in subsets:
-			for sb in subset_bitgraphs: # tries all possible manipulations
-				# need to set the matches here..
-				manipulation = list(bits)
-				i, j = 0, 1 # keep track of which indices so can access matches
-				for match in sb:
-					if int(match) == 1: 
-						u, v = subset[i], subset[j]
-						idx = get_idx_for_match(u, v, n)
-						if manipulation[idx] == "0":
-							manipulation[idx] = "1"
-						else:
-							manipulation[idx] = "0"
-					j += 1
-					if j > count:
-						i += 1
-						j = i + 1 
-
-				# now get new prob
-				new_key = "".join(manipulation)
-				new_prob = ht[new_key]
-				diff = cur[list(subset)] - new_prob[list(subset)]
-				gain = np.sum(diff) # np.max instead??
-				if gain > maxGain:
-					maxGain = gain
-	return maxGain
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', type=int, default=4)
+    parser.add_argument('-s', type=int, default=3)
     args = parser.parse_args()
-
-    n = args.n  
+    
+    n, s = args.n, args.s
 
     # should store all matches from 1 - 2^floor(log_2 n)
     n_prime = 2**math.ceil(math.log(n, 2))
@@ -136,27 +95,27 @@ if __name__ == "__main__":
     print("Total: %d matches for %d wtih %d dummy players" % (len(matches), n, n_prime-n))
 
     time = Timer()
-    graphs = generate_graphs(n)
-    print("finished generating graphs", len(graphs))
+    graphs, manip = get_all_graphs(n, s)
+    print("Finished generating graphs")
+    print("%d unique graphs, %d manipulated graphs" % (len(graphs), len(manip)))
     
     ht = {}
-    
-    for bitgraph in tqdm(graphs):
+    time = Timer()
+    for bitgraph in tqdm(graphs+manip):
         time.tic()
         G = convert_binary_to_graph(bitgraph, n)
         calculate_prob(bitgraph, G, n, matches, ht, n_prime-n != 0)
         time.toc()
     
-    for k, v in ht.items():
-        print(k, v)
+    # ordering for convience sake
+    ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
 
-    print(len(ht))
-    prev_total = time.total_time
+	# for k, v in ht.items():
+	# 	print(k, v)
+    
+    print("%d entries in table" % len(ht))
     print("Avg Time: %f sec per graph" %time.average_time)
     print("Total Time: %f sec" %time.total_time)
     
-    time.tic()
-    gain = get_manipulability(graphs, n, ht)
-    time.toc()
+    gain = get_manipulability(graphs, n, ht, s=s)
     print("Total gain: ", gain)
-    print("Total Time: %f sec" % time.total_time - prev_total)
