@@ -152,6 +152,17 @@ def convert_sum_to_binary(sum, n):
 
 	return bits
 
+
+def get_num_beat(bits, subset, n):
+	G = convert_binary_to_graph(bits, n)
+
+	num_beat = ~G[subset, :]
+
+	# can only count ones outside
+	num_beat[:, subset] = False 
+
+	return np.sum(num_beat)
+
 def get_all_graphs(n, s=3):
 	bitgraphs = generate_graphs(n)
 	res = []
@@ -169,6 +180,7 @@ def get_all_graphs(n, s=3):
 
 	for bits in bitgraphs:
 		for subset in subsets:
+			print(get_num_beat(bits, subset, n))
 			for sb in subset_bitgraphs:
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches

@@ -61,7 +61,7 @@ def calculate_prob(bits, G, n, ht={}):
 
 	ht[bits] = prob
 	return prob
-
+	
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
