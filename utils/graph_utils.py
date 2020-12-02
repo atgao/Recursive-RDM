@@ -152,7 +152,6 @@ def convert_sum_to_binary(sum, n):
 
 	return bits
 
-
 def get_num_beat(bits, subset, n):
 	G = convert_binary_to_graph(bits, n)
 
@@ -165,9 +164,11 @@ def get_num_beat(bits, subset, n):
 
 def get_all_graphs(n, s=3):
 	bitgraphs = generate_graphs(n)
+	bitgraphs_to_delete = set()
 	res = []
 	res.extend(bitgraphs)
 	manip = []
+	manip_to_delete = set()
 
 	inds = np.arange(n)
 	subsets = list(itertools.combinations(inds, s))
@@ -180,7 +181,10 @@ def get_all_graphs(n, s=3):
 
 	for bits in bitgraphs:
 		for subset in subsets:
-			print(get_num_beat(bits, subset, n))
+			if get_num_beat(bits, subset, n) > 9:
+				# print("continuing???? on ", bits, get_num_beat(bits, subset, n))
+				bitgraphs_to_delete.add(bits)
+				continue
 			for sb in subset_bitgraphs:
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches
@@ -199,10 +203,14 @@ def get_all_graphs(n, s=3):
 
 				# now get new prob
 				new_key = "".join(manipulation)
+				if get_num_beat(new_key, subset, n) > 9:
+					continue
 				manip.append(new_key)
 	# print(res)
 	# print(2**get_num_edges(n), len(res), len(bitgraphs)) # comparison of how much we r saving
-	return res, manip
+	print("bitgraphs to delete: ", len(bitgraphs_to_delete))
+	res = set(res) - bitgraphs_to_delete
+	return list(res), manip
 
 def get_manipulability(graphs, n, ht, s=3):
 	inds = np.arange(n)
@@ -220,9 +228,10 @@ def get_manipulability(graphs, n, ht, s=3):
 
 	maxGain = float('-inf')
 
-	for bits in tqdm(bitgraphs):
+	for bits in bitgraphs:
 		cur = ht[bits] # the current probability
 		for subset in subsets:
+			
 			for sb in subset_bitgraphs: # tries all possible manipulations
 				# need to set the matches here..
 				manipulation = list(bits)

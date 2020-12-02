@@ -61,37 +61,82 @@ def calculate_prob(bits, G, n, ht={}):
 
 	ht[bits] = prob
 	return prob
+
+def find_termination(graphs, manip, n, s): 
+	gains = []
+	while graphs: 
+		print("Finished generating graphs")
+		print("%d unique graphs, %d manipulated graphs for n=%d" % (len(graphs), len(manip), n))
+
+
+		ht = {}
+		time = Timer()
+		for bitgraph in tqdm(graphs+manip):
+			time.tic()
+			G = convert_binary_to_graph(bitgraph, n)
+			calculate_prob(bitgraph, G, n, ht)
+			time.toc()
+		
+		# ordering for convience sake
+		ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
+
+		# for k, v in ht.items():
+		# 	print(k, v)
+
+		print("%d entries in table" % len(ht))
+		print("Avg Time: %f sec per graph" %time.average_time)
+		print("Total Time: %f sec" %time.total_time)
+		
+		gain = get_manipulability(graphs, n, ht, s=s)
+		print("Total gain for %d nodes: %f" %(n, gain))
+		gains.append(gain)
+
+		n += 1 # increase n
+		graphs, manip = get_all_graphs(n, s)
+		print("---------------------------------------")
+	
+	start = 4 
+	for gain in gains:
+		print("Gained %f for n=%d" % (gain, start))
+		start += 1
 	
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
 	parser.add_argument('-s', type=int, default=3)
+	parser.add_argument('-t', type=bool, default=True)
 	args = parser.parse_args()
 
-	n, s = args.n, args.s
+	n, s, terminating = args.n, args.s, args.t
 	time = Timer()
 	graphs, manip = get_all_graphs(n, s)
-	print("Finished generating graphs")
-	print("%d unique graphs, %d manipulated graphs" % (len(graphs), len(manip)))
+
+	if terminating:
+		find_termination(graphs, manip, n, s)
+	else:
+		print("Finished generating graphs")
+		print("%d unique graphs, %d manipulated graphs for n=%d" % (len(graphs), len(manip), n))
 
 
-	ht = {}
-	time = Timer()
-	for bitgraph in tqdm(graphs+manip):
-		time.tic()
-		G = convert_binary_to_graph(bitgraph, n)
-		calculate_prob(bitgraph, G, n, ht)
-		time.toc()
+		ht = {}
+		time = Timer()
+		for bitgraph in tqdm(graphs+manip):
+			time.tic()
+			G = convert_binary_to_graph(bitgraph, n)
+			calculate_prob(bitgraph, G, n, ht)
+			time.toc()
+		
+		# ordering for convience sake
+		ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
+
+		# for k, v in ht.items():
+		# 	print(k, v)
+
+		print("%d entries in table" % len(ht))
+		print("Avg Time: %f sec per graph" %time.average_time)
+		print("Total Time: %f sec" %time.total_time)
+		
+		gain = get_manipulability(graphs, n, ht, s=s)
+		print("Total gain for %d nodes: %f" %(n, gain))
+
 	
-	# ordering for convience sake
-	ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
-
-	# for k, v in ht.items():
-	# 	print(k, v)
-
-	print("%d entries in table" % len(ht))
-	print("Avg Time: %f sec per graph" %time.average_time)
-	print("Total Time: %f sec" %time.total_time)
-	
-	gain = get_manipulability(graphs, n, ht, s=s)
-	print("Total gain: ", gain)
