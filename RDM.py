@@ -104,19 +104,20 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
 	parser.add_argument('-s', type=int, default=3)
-	parser.add_argument('-t', type=bool, default=True)
+	parser.add_argument('-t', type=str, default="True")
 	args = parser.parse_args()
 
 	n, s, terminating = args.n, args.s, args.t
 	time = Timer()
 	graphs, manip = get_all_graphs(n, s)
 
-	if terminating:
+	if terminating.lower() == "true":
 		find_termination(graphs, manip, n, s)
 	else:
 		print("Finished generating graphs")
 		print("%d unique graphs, %d manipulated graphs for n=%d" % (len(graphs), len(manip), n))
 
+		print(graphs, len(graphs))
 
 		ht = {}
 		time = Timer()
@@ -138,5 +139,7 @@ if __name__ == "__main__":
 		
 		gain = get_manipulability(graphs, n, ht, s=s)
 		print("Total gain for %d nodes: %f" %(n, gain))
+
+		draw_graph(graphs, n)
 
 	

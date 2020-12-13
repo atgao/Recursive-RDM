@@ -2,9 +2,30 @@
 import numpy as np
 import argparse
 import itertools
+import networkx as nx
+import matplotlib as mpl
+import matplotlib.pyplot as plt
 
 import collections
 from tqdm import tqdm 
+
+
+def draw_graph(bitgraphs, n):
+
+	for i in range(len(bitgraphs)):
+		G = convert_binary_to_graph(bitgraphs[i], n)
+		G = nx.from_numpy_matrix(G, create_using=nx.DiGraph)
+		pos = nx.layout.spring_layout(G)
+		nodes = nx.draw_networkx_nodes(G, pos)
+		edges = nx.draw_networkx_edges(G, pos, arrowstyle="->")
+		nx.draw_networkx_labels(G, pos, font_color="w")
+
+		# plt.draw() 
+		# plt.figure()
+		plt.title(bitgraphs[i])
+		plt.draw()
+		plt.savefig("graphs/rdm/%s.jpg"%bitgraphs[i])
+		plt.clf()
 
 def get_num_edges(n):
 	return int(n*(n-1)/2)
@@ -47,13 +68,17 @@ def convert_binary_to_graph(bits, n):
 			col = row + 1 
 	return G
 
-def generate_graphs(n):
+def generate_graphs(n, unique=True):
 	'''
 	n: number of nodes in graph
 	return: list of all possible directed graphs
 	'''
 	sums = generate_sums(n)
 	bitgraphs = []
+
+	if not unique:
+		e = get_num_edges(n)
+		return [np.binary_repr(i, width=e) for i in range(2**e)]
 
 	for sum in sums:
 		bit = convert_sum_to_binary(sum, n)
@@ -176,7 +201,8 @@ def get_all_graphs(n, s=3):
 	if s == 2:
 		subset_bitgraphs = generate_graphs(s)
 	else:
-		subset_bitgraphs = generate_graphs(s)[1:]
+		subset_bitgraphs = generate_graphs(s, unique=False)
+		# subset_bitgraphs = generate_graphs(s)
 	count = s-1
 
 	for bits in bitgraphs:
@@ -189,13 +215,16 @@ def get_all_graphs(n, s=3):
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches
 				for match in sb:
-					if int(match) == 1: 
-						u, v = subset[i], subset[j]
-						idx = get_idx_for_match(u, v, n)
-						if manipulation[idx] == "0":
-							manipulation[idx] = "1"
-						else:
-							manipulation[idx] = "0"
+					# if int(match) == 1: 
+					# 	u, v = subset[i], subset[j]
+					# 	idx = get_idx_for_match(u, v, n)
+					# 	if manipulation[idx] == "0":
+					# 		manipulation[idx] = "1"
+					# 	else:
+					# 		manipulation[idx] = "0"
+					u, v = subset[i], subset[j]
+					idx = get_idx_for_match(u, v, n)
+					manipulation[idx] = match
 					j += 1
 					if j > count:
 						i += 1
@@ -223,7 +252,8 @@ def get_manipulability(graphs, n, ht, s=3):
 	if s == 2:
 		subset_bitgraphs = generate_graphs(s)
 	else:
-		subset_bitgraphs = generate_graphs(s)[1:]
+		subset_bitgraphs = generate_graphs(s, unique=False)
+		# subset_bitgraphs = generate_graphs(s)
 	count = s-1
 
 	maxGain = float('-inf')
@@ -237,13 +267,16 @@ def get_manipulability(graphs, n, ht, s=3):
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches
 				for match in sb:
-					if int(match) == 1: 
-						u, v = subset[i], subset[j]
-						idx = get_idx_for_match(u, v, n)
-						if manipulation[idx] == "0":
-							manipulation[idx] = "1"
-						else:
-							manipulation[idx] = "0"
+					# if int(match) == 1: 
+					# 	u, v = subset[i], subset[j]
+					# 	idx = get_idx_for_match(u, v, n)
+					# 	if manipulation[idx] == "0":
+					# 		manipulation[idx] = "1"
+					# 	else:
+					# 		manipulation[idx] = "0"
+					u, v = subset[i], subset[j]
+					idx = get_idx_for_match(u, v, n)
+					manipulation[idx] = match
 					j += 1
 					if j > count:
 						i += 1
@@ -256,6 +289,7 @@ def get_manipulability(graphs, n, ht, s=3):
 				diff = new_prob[list(subset)] - cur[list(subset)] 
 				gain = np.sum(diff) # np.max instead??
 				if gain > maxGain:
+					print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
 					maxGain = gain
 	return maxGain
 
