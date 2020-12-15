@@ -2,12 +2,13 @@
 import numpy as np
 import argparse
 import itertools
-import networkx as nx
+# import networkx as nx
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 import collections
 from tqdm import tqdm 
+import subprocess
 
 
 def draw_graph(bitgraphs, n):
@@ -82,8 +83,7 @@ def generate_graphs(n, unique=True):
 
 	for sum in sums:
 		bit = convert_sum_to_binary(sum, n)
-		if bit != "":
-			bitgraphs.append(bit)
+		bitgraphs.extend(bit)
 	return bitgraphs
 
 def check_permutation(bg1, bg2, n):
@@ -149,6 +149,7 @@ def convert_sum_to_binary(sum, n):
 	if len(sum) < n: sum.extend(0 for i in range(n-len(sum)))
 	sum = collections.deque(sum)
 	G = np.identity(n, dtype=np.bool_)
+	bits = []
 
 	for i in range(n):
 		wins = np.sum(G[i]) - 1
@@ -173,9 +174,38 @@ def convert_sum_to_binary(sum, n):
 		G[i+1:, i] = ~G[i][i+1:]
 
 	triu_inds = np.triu_indices(n, 1)
-	bits = "".join(str(i) for i in G[triu_inds].astype("uint8"))
+	bits.append("".join(str(i) for i in G[triu_inds].astype("uint8")))
 
 	return bits
+
+def convert_sum_to_graph(sum, n):
+	if len(sum) < n: sum.extend(0 for i in range(n-len(sum)))
+	sum = collections.deque(sum)
+	G = np.identity(n, dtype=np.bool_)
+	bits = []
+
+	for i in range(n):
+		wins = np.sum(G[i]) - 1
+		temp = sum.popleft()
+		num = temp - wins
+		remaining = n - i - 1
+
+		count = 0
+		while num > remaining:
+			sum.append(temp)
+			temp = sum.popleft()
+			num = temp - wins 
+			remaining = n - i - 1
+			count += 1
+			if count > len(sum): 
+				# print(i, count, num, remaining)
+				return ""
+
+		# set row
+		G[i][i+1:i+1+num] = ~G[i][i+1:i+1+num]
+		# set col 
+		G[i+1:, i] = ~G[i][i+1:]
+	return G
 
 def get_num_beat(bits, subset, n):
 	G = convert_binary_to_graph(bits, n)
@@ -193,7 +223,6 @@ def get_all_graphs(n, s=3):
 	res = []
 	res.extend(bitgraphs)
 	manip = []
-	manip_to_delete = set()
 
 	inds = np.arange(n)
 	subsets = list(itertools.combinations(inds, s))
@@ -293,6 +322,10 @@ def get_manipulability(graphs, n, ht, s=3):
 					maxGain = gain
 	return maxGain
 
+def gentourng(n):
+	res = subprocess.check_output("./nauty27r1/gentourng %d" % n, shell=True)
+	return res.decode().splitlines()
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
@@ -312,4 +345,31 @@ if __name__ == "__main__":
 	# 	if bit != "": count += 1
 	# 	print(sum, bit)
 	# print("Total for %d graphs: %d " % (n, count))
-	get_all_graphs(n)
+	# get_all_graphs(n)
+
+	# # trying to add new node to n+1 here
+	# sums = generate_sums(4)
+	# n = 4
+	# count = 0
+	# inds = np.arange(4)
+	# for sum in sums:
+	# 	G = convert_sum_to_graph(sum, n)
+	# 	new_G = np.identity(n+1, dtype=np.bool_)
+	# 	new_G[1:, 1:] = G.copy()
+
+	# 	# print(G.astype("uint8"))
+	# 	# print(new_G.astype("uint8"))
+	# 	possible_wins = [i for i in range(sum[0], n+1)]
+	# 	print(possible_wins)
+	# 	for win in possible_wins:
+	# 		combos = set(itertools.combinations(sum, win))
+	# 		# print(combos)
+	# 		for combo in combos:
+	# 			beat = np.any(sum == combo)
+	# 			print(beat)
+	# 		count += len(combos)
+	# 	print("-----------")
+
+	# print(count)
+	tournaments = gentourng(n)
+	print(tournaments)

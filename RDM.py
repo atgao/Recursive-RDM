@@ -110,36 +110,37 @@ if __name__ == "__main__":
 	n, s, terminating = args.n, args.s, args.t
 	time = Timer()
 	graphs, manip = get_all_graphs(n, s)
+	print(graphs, len(graphs), len(set(graphs)))
 
-	if terminating.lower() == "true":
-		find_termination(graphs, manip, n, s)
-	else:
-		print("Finished generating graphs")
-		print("%d unique graphs, %d manipulated graphs for n=%d" % (len(graphs), len(manip), n))
+	# if terminating.lower() == "true":
+	# 	find_termination(graphs, manip, n, s)
+	# else:
+	# 	print("Finished generating graphs")
+	# 	print("%d unique graphs, %d manipulated graphs for n=%d" % (len(graphs), len(manip), n))
 
-		print(graphs, len(graphs))
+	# 	print(graphs, len(graphs))
 
-		ht = {}
-		time = Timer()
-		for bitgraph in tqdm(graphs+manip):
-			time.tic()
-			G = convert_binary_to_graph(bitgraph, n)
-			calculate_prob(bitgraph, G, n, ht)
-			time.toc()
+	# 	ht = {}
+	# 	time = Timer()
+	# 	for bitgraph in tqdm(graphs+manip):
+	# 		time.tic()
+	# 		G = convert_binary_to_graph(bitgraph, n)
+	# 		calculate_prob(bitgraph, G, n, ht)
+	# 		time.toc()
 		
-		# ordering for convience sake
-		ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
+	# 	# ordering for convience sake
+	# 	ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
 
-		# for k, v in ht.items():
-		# 	print(k, v)
+	# 	# for k, v in ht.items():
+	# 	# 	print(k, v)
 
-		print("%d entries in table" % len(ht))
-		print("Avg Time: %f sec per graph" %time.average_time)
-		print("Total Time: %f sec" %time.total_time)
+	# 	print("%d entries in table" % len(ht))
+	# 	print("Avg Time: %f sec per graph" %time.average_time)
+	# 	print("Total Time: %f sec" %time.total_time)
 		
-		gain = get_manipulability(graphs, n, ht, s=s)
-		print("Total gain for %d nodes: %f" %(n, gain))
+	# 	gain = get_manipulability(graphs, n, ht, s=s)
+	# 	print("Total gain for %d nodes: %f" %(n, gain))
 
-		draw_graph(graphs, n)
+	# 	draw_graph(graphs, n)
 
 	
