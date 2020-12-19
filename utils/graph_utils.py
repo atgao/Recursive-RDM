@@ -81,25 +81,7 @@ def generate_graphs(n, unique=True):
 		e = get_num_edges(n)
 		return [np.binary_repr(i, width=e) for i in range(2**e)]
 
-	for sum in sums:
-		bit = convert_sum_to_binary(sum, n)
-		bitgraphs.extend(bit)
-	return bitgraphs
-
-def check_permutation(bg1, bg2, n):
-	G1 = convert_binary_to_graph(bg1, n)
-	G2 = convert_binary_to_graph(bg2, n)
-
-	perms = list(itertools.permutations(np.arange(n)))[1:]
-	P = np.zeros((n, n), dtype=np.uint8)
-	inds = np.arange(n)
-
-	for perm in perms:
-		P[inds, perm] = 1
-		if np.all(P @ (G1 @ P.T) == G2):
-			return True
-		P[inds, perm] = 0 # reset
-	return False
+	return gentourng(n)
 
 def permute_probs(bg1, bg2, prob, n):
 	G1 = convert_binary_to_graph(bg1, n)
