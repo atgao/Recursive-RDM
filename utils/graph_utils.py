@@ -10,6 +10,8 @@ import collections
 from tqdm import tqdm 
 import subprocess
 
+from timer import Timer
+
 
 def draw_graph(bitgraphs, n):
 
@@ -74,8 +76,6 @@ def generate_graphs(n, unique=True):
 	n: number of nodes in graph
 	return: list of all possible directed graphs
 	'''
-	sums = generate_sums(n)
-	bitgraphs = []
 
 	if not unique:
 		e = get_num_edges(n)
@@ -103,91 +103,6 @@ def permute_probs(bg1, bg2, prob, n):
 	for i in range(n):
 		new_prob[i] = prob[perm[i]]
 	return new_prob
-
-def generate_sums(n):
-	e = get_num_edges(n)
-	
-	# first ordering always n-1, n-2, n-3....0
-	nums = [i for i in range(1, n)]
-	sums = combinationSum(nums, e, n)
-	return sums
-
-def combinationSum(nums, target, k):
-	res = []
-	nums.sort()
-	def dfs(left, path, idx):
-		if not left and len(path) <= k: res.append(path[::-1])
-		else:
-			for i, val in enumerate(nums[idx:]):
-				if val > left: break
-				if len(path) > 0:
-					if val == nums[-1] and path[-1] == nums[-1]: 
-						break
-				dfs(left - val, path + [val], idx + i)
-	dfs(target, [], 0)
-	return res
-
-def convert_sum_to_binary(sum, n):
-	if len(sum) < n: sum.extend(0 for i in range(n-len(sum)))
-	sum = collections.deque(sum)
-	G = np.identity(n, dtype=np.bool_)
-	bits = []
-
-	for i in range(n):
-		wins = np.sum(G[i]) - 1
-		temp = sum.popleft()
-		num = temp - wins
-		remaining = n - i - 1
-
-		count = 0
-		while num > remaining:
-			sum.append(temp)
-			temp = sum.popleft()
-			num = temp - wins 
-			remaining = n - i - 1
-			count += 1
-			if count > len(sum): 
-				# print(i, count, num, remaining)
-				return ""
-
-		# set row
-		G[i][i+1:i+1+num] = ~G[i][i+1:i+1+num]
-		# set col 
-		G[i+1:, i] = ~G[i][i+1:]
-
-	triu_inds = np.triu_indices(n, 1)
-	bits.append("".join(str(i) for i in G[triu_inds].astype("uint8")))
-
-	return bits
-
-def convert_sum_to_graph(sum, n):
-	if len(sum) < n: sum.extend(0 for i in range(n-len(sum)))
-	sum = collections.deque(sum)
-	G = np.identity(n, dtype=np.bool_)
-	bits = []
-
-	for i in range(n):
-		wins = np.sum(G[i]) - 1
-		temp = sum.popleft()
-		num = temp - wins
-		remaining = n - i - 1
-
-		count = 0
-		while num > remaining:
-			sum.append(temp)
-			temp = sum.popleft()
-			num = temp - wins 
-			remaining = n - i - 1
-			count += 1
-			if count > len(sum): 
-				# print(i, count, num, remaining)
-				return ""
-
-		# set row
-		G[i][i+1:i+1+num] = ~G[i][i+1:i+1+num]
-		# set col 
-		G[i+1:, i] = ~G[i][i+1:]
-	return G
 
 def get_num_beat(bits, subset, n):
 	G = convert_binary_to_graph(bits, n)
@@ -308,6 +223,67 @@ def gentourng(n):
 	res = subprocess.check_output("./nauty27r1/gentourng %d" % n, shell=True)
 	return res.decode().splitlines()
 
+def get_all_graphs_higher_nodes(n, s=3):
+	m = n-s
+	bitgraphs = generate_graphs(m)
+	subsets = generate_graphs(s, unique=True)
+
+	final_graphs = []
+
+	# now connect them
+	# actually need to do this in a loop up to 
+	# k = 9???
+	conns = kbits(m*s, 9)
+	for i in range(len(conns)):
+		arr = np.fromstring(conns[i], dtype='u1').reshape((s, m)) - ord('0')
+		conns[i] = arr
+	print("finished converting conns...")
+
+	zeros = np.zeros((m, m), dtype=np.bool_)
+	conns_zeros = np.zeros((s, m), dtype=np.bool_)
+	
+	time = Timer()
+
+	for subset in subsets:
+		G = np.identity(n, dtype=np.bool_)
+		G[:s, :s] = convert_binary_to_graph(subset, s)
+		
+		for bitgraph in bitgraphs: 
+			time.tic()
+			G[s:, s:] = convert_binary_to_graph(bitgraph, m)
+
+			for conn in conns:
+				
+				# technically should also set G[s:, :s]
+				# but it's okay bc of way graph is built 
+				G[:s, s:] = conn
+				
+				# build the new graph and append it
+				triu_inds = np.triu_indices(n-1, 1)
+				new_bits = "".join(str(i) for i in G[triu_inds].astype("uint8"))
+				final_graphs.append(new_bits)
+				
+				# clear out connections
+				G[:s, s:] = conns_zeros
+
+			# clears out the mxm graph for new mxm graph
+			G[s:, s:] = zeros
+			time.toc()
+	print("Total Time: %f sec" %time.total_time)
+	print("Avg Time: %f sec per graph" %time.average_time)
+	print(len(final_graphs))
+	return final_graphs
+
+# taken from https://stackoverflow.com/questions/1851134/generate-all-binary-strings-of-length-n-with-k-bits-set
+def kbits(n, k):
+	result = []
+	for bits in itertools.combinations(range(n), k):
+		s = ['0'] * n
+		for bit in bits:
+			s[bit] = '1'
+		result.append(''.join(s))
+	return result
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
@@ -315,43 +291,7 @@ if __name__ == "__main__":
 
 	n = args.n
 
-	# sums = generate_sums(n)
-	# print(sums, len(sums))
-	# bitgraphs = []
-
-	# for sum in sums:
-	# 	bitgraphs.append(convert_sum_to_binary(sum, n))
-	
-	# count = 0
-	# for sum, bit in zip(sums, bitgraphs):
-	# 	if bit != "": count += 1
-	# 	print(sum, bit)
-	# print("Total for %d graphs: %d " % (n, count))
-	# get_all_graphs(n)
-
-	# # trying to add new node to n+1 here
-	# sums = generate_sums(4)
-	# n = 4
-	# count = 0
-	# inds = np.arange(4)
-	# for sum in sums:
-	# 	G = convert_sum_to_graph(sum, n)
-	# 	new_G = np.identity(n+1, dtype=np.bool_)
-	# 	new_G[1:, 1:] = G.copy()
-
-	# 	# print(G.astype("uint8"))
-	# 	# print(new_G.astype("uint8"))
-	# 	possible_wins = [i for i in range(sum[0], n+1)]
-	# 	print(possible_wins)
-	# 	for win in possible_wins:
-	# 		combos = set(itertools.combinations(sum, win))
-	# 		# print(combos)
-	# 		for combo in combos:
-	# 			beat = np.any(sum == combo)
-	# 			print(beat)
-	# 		count += len(combos)
-	# 	print("-----------")
-
-	# print(count)
-	tournaments = gentourng(n)
-	print(tournaments)
+	# test = kbits(18, 9)
+	# print(test)
+	# print(len(test))
+	get_all_graphs_higher_nodes(9)
