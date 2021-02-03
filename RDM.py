@@ -92,9 +92,22 @@ def find_termination(graphs, manip, n, s):
 		gains.append(gain)
 
 		n += 1 # increase n
-		graphs, manip = get_all_graphs(n, s)
+		if n < 9:
+			graphs, manip = get_all_graphs(n, s)
+		else: 
+			break
 		print("---------------------------------------")
 	
+	if n >= 9:
+		print("ON N>=9....")
+		graphs, manip = get_all_graphs_higher_nodes(n, s)
+		for bitgraph in tqdm(graphs+manip):
+			time.tic()
+			G = convert_binary_to_graph(bitgraph, n)
+			calculate_prob(bitgraph, G, n, ht)
+			time.toc()
+		gain = get_manipulability_higher_nodes(graphs, manips, n, ht, s)
+
 	start = 4 
 	for gain in gains:
 		print("Gained %f for n=%d" % (gain, start))
@@ -137,6 +150,16 @@ if __name__ == "__main__":
 		
 		gain = get_manipulability(graphs, n, ht, s=s)
 		print("Total gain for %d nodes: %f" %(n, gain))
+
+		subset = [0,3,4]
+		print(ht["1100111111111111111111111111"])
+		print(ht["1111111111111111110111111111"])
+		diff = ht["1100111111111111111111111111"][subset] - ht["1100111111111111111111111111"][subset]
+		print("diff: ", diff, np.sum(diff) )
+		# print(ht["110011111111111"])
+		# print(ht["111111111111011"])
+		# diff = ht["111111111111011"][subset] - ht["110011111111111"][subset]
+		# print("diff: ", diff, np.sum(diff))
 
 	# 	draw_graph(graphs, n)
 

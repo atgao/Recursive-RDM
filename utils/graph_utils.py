@@ -10,7 +10,7 @@ import collections
 from tqdm import tqdm 
 import subprocess
 
-from timer import Timer
+# from timer import Timer
 
 
 def draw_graph(bitgraphs, n):
@@ -165,6 +165,8 @@ def get_all_graphs(n, s=3):
 	# print(2**get_num_edges(n), len(res), len(bitgraphs)) # comparison of how much we r saving
 	print("bitgraphs to delete: ", len(bitgraphs_to_delete))
 	res = set(res) - bitgraphs_to_delete
+	# print("FINAL GRAPHS")
+	# print(res)
 	return list(res), manip
 
 def get_manipulability(graphs, n, ht, s=3):
@@ -189,17 +191,13 @@ def get_manipulability(graphs, n, ht, s=3):
 		for subset in subsets:
 			
 			for sb in subset_bitgraphs: # tries all possible manipulations
+
+				# TODO: can make the opt here with stricter checking on higher nodes
 				# need to set the matches here..
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches
 				for match in sb:
-					# if int(match) == 1: 
-					# 	u, v = subset[i], subset[j]
-					# 	idx = get_idx_for_match(u, v, n)
-					# 	if manipulation[idx] == "0":
-					# 		manipulation[idx] = "1"
-					# 	else:
-					# 		manipulation[idx] = "0"
+
 					u, v = subset[i], subset[j]
 					idx = get_idx_for_match(u, v, n)
 					manipulation[idx] = match
@@ -215,8 +213,25 @@ def get_manipulability(graphs, n, ht, s=3):
 				diff = new_prob[list(subset)] - cur[list(subset)] 
 				gain = np.sum(diff) # np.max instead??
 				if gain > maxGain:
-					print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
+					# print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
+					# print("current graph ", bits, ht[bits])
+					# print("manipulated graph ", new_key, ht[new_key])
+					# print("diff: ", diff)
+					# print("-------------")
 					maxGain = gain
+	return maxGain
+
+def get_manipulability_higher_nodes(graphs, manips, n, ht, s=3):
+	subset = [i for i in range(s)]
+
+	maxGain = float('-inf')
+
+	for graph, manip in zip(graphs, manip):
+		diff = ht[manip][subset] - ht[graph][subset]
+		gain = np.sum(diff) # np.max instead??
+		if gain > maxGain:
+			# print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
+			maxGain = gain
 	return maxGain
 
 def gentourng(n):
@@ -229,50 +244,57 @@ def get_all_graphs_higher_nodes(n, s=3):
 	subsets = generate_graphs(s, unique=True)
 
 	final_graphs = []
+	manips = []
 
 	# now connect them
 	# actually need to do this in a loop up to 
-	# k = 9???
-	conns = kbits(m*s, 9)
-	for i in range(len(conns)):
-		arr = np.fromstring(conns[i], dtype='u1').reshape((s, m)) - ord('0')
-		conns[i] = arr
-	print("finished converting conns...")
+	for k in range(9):
+		conns = kbits(m*s, k)
+		for i in range(len(conns)):
+			# should technically ~conns[i] since 1 = win, 0 = beat...
+			arr = np.fromstring(conns[i], dtype='u1').reshape((s, m)) - ord('0')
+			conns[i] = ~arr # can convert it to ~conns[i] here
+		print("finished converting conns... for k = %d" %k)
 
-	zeros = np.zeros((m, m), dtype=np.bool_)
-	conns_zeros = np.zeros((s, m), dtype=np.bool_)
-	
-	time = Timer()
-
-	for subset in subsets:
-		G = np.identity(n, dtype=np.bool_)
-		G[:s, :s] = convert_binary_to_graph(subset, s)
+		zeros = np.zeros((m, m), dtype=np.bool_)
+		conns_zeros = np.zeros((s, m), dtype=np.bool_)
 		
-		for bitgraph in bitgraphs: 
-			time.tic()
-			G[s:, s:] = convert_binary_to_graph(bitgraph, m)
+		# time = Timer()
 
-			for conn in conns:
-				
-				# technically should also set G[s:, :s]
-				# but it's okay bc of way graph is built 
-				G[:s, s:] = conn
-				
-				# build the new graph and append it
-				triu_inds = np.triu_indices(n-1, 1)
-				new_bits = "".join(str(i) for i in G[triu_inds].astype("uint8"))
-				final_graphs.append(new_bits)
-				
-				# clear out connections
-				G[:s, s:] = conns_zeros
+		for subset in subsets:
+			G = np.identity(n, dtype=np.bool_)
+			G[:s, :s] = convert_binary_to_graph(subset, s)
+			
+			for bitgraph in bitgraphs: 
+				# time.tic()
+				G[s:, s:] = convert_binary_to_graph(bitgraph, m)
 
-			# clears out the mxm graph for new mxm graph
-			G[s:, s:] = zeros
-			time.toc()
-	print("Total Time: %f sec" %time.total_time)
-	print("Avg Time: %f sec per graph" %time.average_time)
-	print(len(final_graphs))
-	return final_graphs
+				for conn in conns:
+					
+					# technically should also set G[s:, :s]
+					# but it's okay bc of way graph is built 
+					G[:s, s:] = conn
+					
+					# build the new graph and append it
+					triu_inds = np.triu_indices(n, 1)
+					new_bits = "".join(str(i) for i in G[triu_inds].astype("uint8"))
+					if subset == subsets[-1]:
+						manips.append(new_bits)
+					else:
+						final_graphs.append(new_bits)
+					
+					
+					# clear out connections
+					G[:s, s:] = conns_zeros
+
+				# clears out the mxm graph for new mxm graph
+				G[s:, s:] = zeros
+				# time.toc()
+
+	# print("Total Time: %f sec" %time.total_time)
+	# print("Avg Time: %f sec per graph" %time.average_time)
+	print(len(final_graphs), len(manips))
+	return final_graphs, manips
 
 # taken from https://stackoverflow.com/questions/1851134/generate-all-binary-strings-of-length-n-with-k-bits-set
 def kbits(n, k):
@@ -294,4 +316,10 @@ if __name__ == "__main__":
 	# test = kbits(18, 9)
 	# print(test)
 	# print(len(test))
-	get_all_graphs_higher_nodes(9)
+	if n >= 9:
+		graphs, manips = get_all_graphs_higher_nodes(n)
+	else:
+		graphs, manips = get_all_graphs(n)
+	# print(len(graphs[0]), graphs[0])
+
+	# print(gentourng(9)[0])
