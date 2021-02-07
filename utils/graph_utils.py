@@ -134,7 +134,15 @@ def get_all_graphs(n, s=3):
 			if get_num_beat(bits, subset, n) > 9:
 				continue
 			graphs_and_subsets[bits].append(subset) # consider these subsets for the graph
+			
+			# form the originally colluding nodes
+			orig_colluding = []
+			for s in subset:
+				orig_colluding.append(bits[s])
+			orig_colluding = "".join(orig_colluding)
+
 			for sb in subset_bitgraphs:
+
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches
 				for match in sb:
@@ -148,7 +156,14 @@ def get_all_graphs(n, s=3):
 
 				# now get new prob
 				new_key = "".join(manipulation)
-				if get_num_beat(new_key, subset, n) > 9:
+				
+				# stricter checks to eliminate graphs
+				manip_diff = count_difference(orig_colluding, sb)
+				if manip_diff == 3 and get_num_beat(new_key, subset, n) > 9:
+					continue 
+				if manip_diff == 2 and get_num_beat(new_key, subset, n) > 6:
+					continue 
+				if manip_diff == 1 and get_num_beat(new_key, subset, n) > 3: 
 					continue
 				manip.append(new_key)
 	return graphs_and_subsets, manip
@@ -173,10 +188,15 @@ def get_manipulability(graphs, n, ht, s=3):
 	for bits in bitgraphs:
 		cur = ht[bits] # the current probability
 		for subset in bitgraphs[bits]: # only use subsets we know satisfy conditions
+			
+			# form the originally colluding nodes
+			orig_colluding = []
+			for s in subset:
+				orig_colluding.append(bits[s])
+			orig_colluding = "".join(orig_colluding)
+
 			for sb in subset_bitgraphs: # tries all possible manipulations
 
-				# TODO: can make the opt here with stricter checking on higher nodes
-				# need to set the matches here..
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches
 				for match in sb:
@@ -191,6 +211,15 @@ def get_manipulability(graphs, n, ht, s=3):
 
 				# now get new prob
 				new_key = "".join(manipulation)
+
+				# stricter checks to eliminate graphs
+				manip_diff = count_difference(orig_colluding, sb)
+				if manip_diff == 3 and get_num_beat(new_key, subset, n) > 9:
+					continue 
+				if manip_diff == 2 and get_num_beat(new_key, subset, n) > 6:
+					continue 
+				if manip_diff == 1 and get_num_beat(new_key, subset, n) > 3: 
+					continue
 				
 				new_prob = ht[new_key]
 				diff = new_prob[list(subset)] - cur[list(subset)] 

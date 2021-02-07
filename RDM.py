@@ -71,7 +71,7 @@ def find_termination(graphs, manip, n, s):
 
 		ht = {}
 		time = Timer()
-		for bitgraph in tqdm(graphs+manip):
+		for bitgraph in tqdm(list(graphs.keys())+manip):
 			time.tic()
 			G = convert_binary_to_graph(bitgraph, n)
 			calculate_prob(bitgraph, G, n, ht)
