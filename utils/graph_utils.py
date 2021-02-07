@@ -306,6 +306,13 @@ def kbits(n, k):
 		result.append(''.join(s))
 	return result
 
+def count_difference(bit1, bit2):
+	count = 0
+	for b1, b2 in zip(bit1, bit2):
+		if b1 != b2: 
+			count += 1
+	return count
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
@@ -320,6 +327,11 @@ if __name__ == "__main__":
 		graphs, manips = get_all_graphs_higher_nodes(n)
 	else:
 		graphs, manips = get_all_graphs(n)
-	# print(len(graphs[0]), graphs[0])
+	print(len(graphs[0]), graphs[0])
 
 	# print(gentourng(9)[0])
+	# bit1s = ["111", "101", "000", "110"]
+	# bit2s = ["000", "101", "110", "111"]
+
+	# for bit1, bit2 in zip(bit1s, bit2s):
+	# 	print(count_difference(bit1, bit2))
