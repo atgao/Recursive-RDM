@@ -116,11 +116,9 @@ def get_num_beat(bits, subset, n):
 
 def get_all_graphs(n, s=3):
 	bitgraphs = generate_graphs(n)
-	bitgraphs_to_delete = set()
-	res = []
-	res.extend(bitgraphs)
+	graphs_and_subsets = collections.defaultdict(list)
 	manip = []
-
+	
 	inds = np.arange(n)
 	subsets = list(itertools.combinations(inds, s))
 
@@ -134,20 +132,12 @@ def get_all_graphs(n, s=3):
 	for bits in bitgraphs:
 		for subset in subsets:
 			if get_num_beat(bits, subset, n) > 9:
-				# print("continuing???? on ", bits, get_num_beat(bits, subset, n))
-				bitgraphs_to_delete.add(bits)
 				continue
+			graphs_and_subsets[bits].append(subset) # consider these subsets for the graph
 			for sb in subset_bitgraphs:
 				manipulation = list(bits)
 				i, j = 0, 1 # keep track of which indices so can access matches
 				for match in sb:
-					# if int(match) == 1: 
-					# 	u, v = subset[i], subset[j]
-					# 	idx = get_idx_for_match(u, v, n)
-					# 	if manipulation[idx] == "0":
-					# 		manipulation[idx] = "1"
-					# 	else:
-					# 		manipulation[idx] = "0"
 					u, v = subset[i], subset[j]
 					idx = get_idx_for_match(u, v, n)
 					manipulation[idx] = match
@@ -161,13 +151,7 @@ def get_all_graphs(n, s=3):
 				if get_num_beat(new_key, subset, n) > 9:
 					continue
 				manip.append(new_key)
-	# print(res)
-	# print(2**get_num_edges(n), len(res), len(bitgraphs)) # comparison of how much we r saving
-	print("bitgraphs to delete: ", len(bitgraphs_to_delete))
-	res = set(res) - bitgraphs_to_delete
-	# print("FINAL GRAPHS")
-	# print(res)
-	return list(res), manip
+	return graphs_and_subsets, manip
 
 def get_manipulability(graphs, n, ht, s=3):
 	inds = np.arange(n)
@@ -188,8 +172,7 @@ def get_manipulability(graphs, n, ht, s=3):
 
 	for bits in bitgraphs:
 		cur = ht[bits] # the current probability
-		for subset in subsets:
-			
+		for subset in bitgraphs[bits]: # only use subsets we know satisfy conditions
 			for sb in subset_bitgraphs: # tries all possible manipulations
 
 				# TODO: can make the opt here with stricter checking on higher nodes
@@ -327,7 +310,8 @@ if __name__ == "__main__":
 		graphs, manips = get_all_graphs_higher_nodes(n)
 	else:
 		graphs, manips = get_all_graphs(n)
-	print(len(graphs[0]), graphs[0])
+	# print(len(graphs[0]), graphs[0], len(manips))
+	print(len(graphs), len(manips))
 
 	# print(gentourng(9)[0])
 	# bit1s = ["111", "101", "000", "110"]

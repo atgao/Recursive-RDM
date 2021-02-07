@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
 		ht = {}
 		time = Timer()
-		for bitgraph in tqdm(graphs+manip):
+		for bitgraph in tqdm(list(graphs.keys())+manip):
 			time.tic()
 			G = convert_binary_to_graph(bitgraph, n)
 			calculate_prob(bitgraph, G, n, ht)
@@ -151,11 +151,11 @@ if __name__ == "__main__":
 		gain = get_manipulability(graphs, n, ht, s=s)
 		print("Total gain for %d nodes: %f" %(n, gain))
 
-		subset = [0,3,4]
-		print(ht["1100111111111111111111111111"])
-		print(ht["1111111111111111110111111111"])
-		diff = ht["1100111111111111111111111111"][subset] - ht["1100111111111111111111111111"][subset]
-		print("diff: ", diff, np.sum(diff) )
+		# subset = [0,3,4]
+		# print(ht["1100111111111111111111111111"])
+		# print(ht["1111111111111111110111111111"])
+		# diff = ht["1100111111111111111111111111"][subset] - ht["1100111111111111111111111111"][subset]
+		# print("diff: ", diff, np.sum(diff) )
 		# print(ht["110011111111111"])
 		# print(ht["111111111111011"])
 		# diff = ht["111111111111011"][subset] - ht["110011111111111"][subset]
