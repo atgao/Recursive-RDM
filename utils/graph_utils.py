@@ -10,7 +10,7 @@ import collections
 from tqdm import tqdm 
 import subprocess
 
-# from timer import Timer
+from timer import Timer
 
 
 def draw_graph(bitgraphs, n):
@@ -325,6 +325,80 @@ def count_difference(bit1, bit2):
 			count += 1
 	return count
 
+def connect_two_graphs(colluders, G, k):
+	res = []
+
+	colluding_groups = []
+	for graph in colluders:
+		if graph == "101":
+			group = {1: [0, 1, 2]}
+		else: 
+			group = {1: [0], 2: [1], 3: [2]}
+		colluding_groups.append(group)
+	
+	colluding_combos = []
+	for graph in colluding_groups:
+		temp = itertools.combinations(graph.keys()) # TODO: make sure to go thru keys
+
+	for graph in G: 
+		for colluding_groups in colluding_groups:
+			# any way to prune these when first making them??
+			temp = itertools.combinations(colluding_groups.keys()) # TODO: make sure to go thru keys
+
+
+
+
+	return res 
+
+
+def determine_groups(G, n):
+	# 1. start by partitioning sets by degree 
+	graph = convert_binary_to_graph(G, n)
+	degrees = np.sum(graph, axis=1) # degree = number of wins 
+
+	# 2. partition into initial sets by degree
+	groups = {} # key = degree, value = nodes in group
+	for node, degree in enumerate(degrees):
+		group = groups.get(degree, [])
+		group.append(node)
+		groups[degree] = group 
+	
+	# 3. refine groups
+	# print(graph.astype('uint8'), "\n\n", degrees, "\n", groups)
+	# print(groups)
+	np.fill_diagonal(graph, 0) # do this to help with indexing later
+	new_group_num = np.max(degrees) + 1 
+
+	while True:
+		new_groups = {}
+		for k, v in groups.items():
+			nodes_beat = set() 
+
+			losers = np.argwhere(graph[v[0]] == 1)[0] if len(np.argwhere(graph[v[0]] == 1)) > 0 else []
+			for l in losers: nodes_beat.add(l)
+			new_group_nodes = []
+			# print(k)
+			for node in v[1:]:
+				losers = np.argwhere(graph[node] == 1)[0]
+
+				for l in losers:
+					if l not in nodes_beat:
+						# split this into new group
+						new_group_nodes.append(node)
+						break 
+			
+			# add new groups 
+			if len(new_group_nodes) > 0:
+				groups[k] = list(set(v) - set(new_group_nodes))
+				new_groups[new_group_num] = new_group_nodes
+				new_group_num += 1
+		
+		# update with new groups 
+		groups.update(new_groups)	
+		if len(new_groups) == 0: break
+		# print("another update round")
+	return groups
+
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-n', type=int, default=4)
@@ -332,19 +406,17 @@ if __name__ == "__main__":
 
 	n = args.n
 
-	# test = kbits(18, 9)
-	# print(test)
-	# print(len(test))
-	if n >= 9:
-		graphs, manips = get_all_graphs_higher_nodes(n)
-	else:
-		graphs, manips = get_all_graphs(n)
-	# print(len(graphs[0]), graphs[0], len(manips))
-	print(len(graphs), len(manips))
+	# colluders = generate_graphs(3)
+	# G = generate_graphs(6)
 
-	# print(gentourng(9)[0])
-	# bit1s = ["111", "101", "000", "110"]
-	# bit2s = ["000", "101", "110", "111"]
+	# print(colluders)
 
-	# for bit1, bit2 in zip(bit1s, bit2s):
-	# 	print(count_difference(bit1, bit2))
+	# graphs = connect_two_graphs(colluders, G, 9)
+	graphs = generate_graphs(n)
+
+	time = Timer()
+	for i in range(len(graphs)):
+		time.tic()
+		groups = determine_groups(graphs[i], n)
+		time.toc()
+	print(time.average_time)
