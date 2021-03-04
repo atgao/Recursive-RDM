@@ -325,31 +325,57 @@ def count_difference(bit1, bit2):
 			count += 1
 	return count
 
-def connect_two_graphs(colluders, G, k):
+def connect_two_graphs(colluders, graphs, k, n, s=3):
 	res = []
 
-	colluding_groups = []
-	for graph in colluders:
-		if graph == "101":
-			group = {1: [0, 1, 2]}
-		else: 
-			group = {1: [0], 2: [1], 3: [2]}
-		colluding_groups.append(group)
-	
-	colluding_combos = []
-	for graph in colluding_groups:
-		temp = itertools.combinations(graph.keys()) # TODO: make sure to go thru keys
+	colluding_groups = [determine_groups(G, s) for G in colluders]
 
-	for graph in G: 
-		for colluding_groups in colluding_groups:
-			# any way to prune these when first making them??
-			temp = itertools.combinations(colluding_groups.keys()) # TODO: make sure to go thru keys
+	colluding_combos = {}
+	for group, G in zip(colluding_groups, colluders):
+		combos = []
+		for i in range(s+1):
+			combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
+		colluding_combos[G] = combos 
 
+	connected_graphs = []
+	G = np.identity(n, dtype=np.bool_)
+	for graph in graphs[:5]: 
+		group = determine_groups(graph, n)
+		print(graph, group)
+		combos = []
+		for i in range(n+1):
+			combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
 
-
-
+		# conenct it to each type of graph 
+		for colluding_G in colluders:
+			print(colluding_G)
+			print(colluding_combos[colluding_G])
+			temp = list(itertools.product(combos, colluding_combos[colluding_G])) 
+		# print(print(new_graph) for new_graph in temp)
+		# for combo in combos:
+		# 	print(combo)
+		# 	print("*******")
+		print("????????")
+		print(combos)
+		
+		print("---------------------------------")
 	return res 
 
+def check_nodes_in_cycle(nodes, G):
+	stack = [nodes[0]]
+	nodes = set(nodes[1:])
+	
+	while stack:
+		curr = stack.pop() 
+		wins = np.argwhere(G[curr] == 1)[0] if len(np.argwhere(G[curr] == 1)) > 0 else []
+
+		for w in wins:
+			if w in nodes:
+				stack.append(w)
+				nodes.remove(w)
+		if len(nodes) == 0: 
+			return True 
+	return False
 
 def determine_groups(G, n):
 	# 1. start by partitioning sets by degree 
@@ -364,20 +390,22 @@ def determine_groups(G, n):
 		groups[degree] = group 
 	
 	# 3. refine groups
-	# print(graph.astype('uint8'), "\n\n", degrees, "\n", groups)
-	# print(groups)
 	np.fill_diagonal(graph, 0) # do this to help with indexing later
 	new_group_num = np.max(degrees) + 1 
 
 	while True:
+		print(groups)
 		new_groups = {}
 		for k, v in groups.items():
 			nodes_beat = set() 
 
+			if len(v) > 1 and len(v) % 2 != 0 and check_nodes_in_cycle(v, graph) is True:
+				continue
+
 			losers = np.argwhere(graph[v[0]] == 1)[0] if len(np.argwhere(graph[v[0]] == 1)) > 0 else []
 			for l in losers: nodes_beat.add(l)
 			new_group_nodes = []
-			# print(k)
+		
 			for node in v[1:]:
 				losers = np.argwhere(graph[node] == 1)[0]
 
@@ -387,16 +415,17 @@ def determine_groups(G, n):
 						new_group_nodes.append(node)
 						break 
 			
-			# add new groups 
+			# add new groups and fix old ones
 			if len(new_group_nodes) > 0:
 				groups[k] = list(set(v) - set(new_group_nodes))
 				new_groups[new_group_num] = new_group_nodes
 				new_group_num += 1
 		
-		# update with new groups 
-		groups.update(new_groups)	
 		if len(new_groups) == 0: break
-		# print("another update round")
+		# update groups dict with new groups 
+		groups.update(new_groups)	
+		print("another update round", new_groups)
+	print("----------")
 	return groups
 
 if __name__ == "__main__":
@@ -407,16 +436,14 @@ if __name__ == "__main__":
 	n = args.n
 
 	# colluders = generate_graphs(3)
-	# G = generate_graphs(6)
+	# graphs = generate_graphs(n-3)
 
 	# print(colluders)
 
-	# graphs = connect_two_graphs(colluders, G, 9)
-	graphs = generate_graphs(n)
-
-	time = Timer()
-	for i in range(len(graphs)):
-		time.tic()
-		groups = determine_groups(graphs[i], n)
-		time.toc()
-	print(time.average_time)
+	# graphs = connect_two_graphs(colluders, graphs, 9, n-3)
+	
+	# # to help with fixing the groups
+	# graphs = generate_graphs(n)
+	# groups = [determine_groups(G, n) for G in graphs]
+	# for group in groups:
+	# 	print(group)
