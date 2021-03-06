@@ -333,7 +333,7 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 	colluding_combos = {}
 	for group, G in zip(colluding_groups, colluders):
 		combos = []
-		for i in range(1,s+1):
+		for i in range(1, s+1):
 			combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
 		colluding_combos[G] = combos 
 	# print("COLLUDING COMBOS", colluding_combos)
@@ -343,7 +343,7 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 		G = np.identity(n+s, dtype=np.bool_)
 		G[s:, s:] = convert_binary_to_graph(graph, n)
 		group = determine_groups(graph, n)
-		print(graph, group)
+		# print(graph, group)
 		group_combos = []
 		for i in range(1, n+1):
 			group_combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
@@ -376,7 +376,6 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 							for unpacked_group in unpacked_combo:
 								for unpacked_group_to_beat in unpacked_combo_to_beat:
 									# print(unpacked_group, "beats ", unpacked_group_to_beat)
-
 									for i in range(len(unpacked_group)):
 										for j in range(len(unpacked_group_to_beat)):
 											non_colluders = np.array(unpacked_group[:i+1])
@@ -393,7 +392,7 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 											# clear out connections
 											G[:s, s:] = conn_zeros
 		# print("---------------------------------")
-	print(len(connected_graphs))
+	# print(len(connected_graphs))
 	return connected_graphs
 
 def check_nodes_in_cycle(nodes, G):
@@ -401,13 +400,15 @@ def check_nodes_in_cycle(nodes, G):
 	nodes = set(nodes[1:])
 	
 	while stack:
+		# print(stack)
 		curr = stack.pop() 
-		wins = np.argwhere(G[curr] == 1)[0] if len(np.argwhere(G[curr] == 1)) > 0 else []
+		wins = np.argwhere(G[curr] == 1).tolist() if len(np.argwhere(G[curr] == 1)) > 0 else []
+		# print("wins: ", np.argwhere(G[curr] == 1), wins)
 
 		for w in wins:
-			if w in nodes:
-				stack.append(w)
-				nodes.remove(w)
+			if w[0] in nodes:
+				stack.append(w[0])
+				nodes.remove(w[0])
 		if len(nodes) == 0: 
 			return True 
 	return False
@@ -424,6 +425,8 @@ def determine_groups(G, n):
 		group.append(node)
 		groups[degree] = group 
 	
+	# print(G, groups)
+	
 	# 3. refine groups
 	np.fill_diagonal(graph, 0) # do this to help with indexing later
 	new_group_num = np.max(degrees) + 1 
@@ -432,7 +435,8 @@ def determine_groups(G, n):
 		new_groups = {}
 		for k, v in groups.items():
 			nodes_beat = set() 
-
+			# print(check_nodes_in_cycle(v, graph), groups)
+			# print("**************")
 			if len(v) > 1 and len(v) % 2 != 0 and check_nodes_in_cycle(v, graph) is True:
 				continue
 
@@ -467,15 +471,18 @@ if __name__ == "__main__":
 
 	n = args.n
 
-	colluders = generate_graphs(3)
-	graphs = generate_graphs(n-3)
+	# colluders = generate_graphs(3)
+	# graphs = generate_graphs(n-3)
 
-	print(colluders)
+	# print(colluders)
 
-	graphs = connect_two_graphs(colluders, graphs, 8, n-3)
+	# graphs = connect_two_graphs(colluders, graphs, 8, n-3)
 	
 	# # to help with fixing the groups
-	# graphs = generate_graphs(n)
-	# groups = [determine_groups(G, n) for G in graphs]
-	# for group in groups:
-	# 	print(group)
+	graphs = generate_graphs(n)
+	groups = [determine_groups(G, n) for G in graphs]
+	for graph, group in zip(graphs, groups):
+		print(graph, ": ", group)
+
+	# G = "1100110111"
+	# print(determine_groups(G, 5))
