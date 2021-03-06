@@ -326,40 +326,75 @@ def count_difference(bit1, bit2):
 	return count
 
 def connect_two_graphs(colluders, graphs, k, n, s=3):
-	res = []
+	connected_graphs = []
 
 	colluding_groups = [determine_groups(G, s) for G in colluders]
 
 	colluding_combos = {}
 	for group, G in zip(colluding_groups, colluders):
 		combos = []
-		for i in range(s+1):
+		for i in range(1,s+1):
 			combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
 		colluding_combos[G] = combos 
-
-	connected_graphs = []
-	G = np.identity(n, dtype=np.bool_)
-	for graph in graphs[:5]: 
+	# print("COLLUDING COMBOS", colluding_combos)
+	
+	conn_zeros = np.zeros((s, n), dtype=np.bool_)
+	for graph in graphs: 
+		G = np.identity(n+s, dtype=np.bool_)
+		G[s:, s:] = convert_binary_to_graph(graph, n)
 		group = determine_groups(graph, n)
 		print(graph, group)
-		combos = []
-		for i in range(n+1):
-			combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
+		group_combos = []
+		for i in range(1, n+1):
+			group_combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
 
-		# conenct it to each type of graph 
-		for colluding_G in colluders:
-			print(colluding_G)
-			print(colluding_combos[colluding_G])
-			temp = list(itertools.product(combos, colluding_combos[colluding_G])) 
-		# print(print(new_graph) for new_graph in temp)
-		# for combo in combos:
-		# 	print(combo)
-		# 	print("*******")
-		print("????????")
-		print(combos)
-		
-		print("---------------------------------")
-	return res 
+
+		for combos in group_combos:
+			if not combos: continue
+			# print("COMBOSSSSS ", combos)
+			# unpacked_combo = list(itertools.chain(*combos[0]))
+			# print(list(itertools.chain(*combos[0])), list(itertools.chain.from_iterable(combos)))
+			for combo in combos:
+				(*unpacked_combo,) = combo
+				# print("unpacked: ", unpacked_combo)
+				unpacked_combo_len = len(list(itertools.chain.from_iterable(unpacked_combo)))
+
+				for colluder in colluders:
+					group_combos_to_beat = colluding_combos[colluder]
+					G[:s, :s] = convert_binary_to_graph(colluder, s) # set up colluder graph 
+					
+					for combos_to_beat in group_combos_to_beat:
+						for combo_to_beat in combos_to_beat:
+							(*unpacked_combo_to_beat,) = combo_to_beat
+							unpacked_combo_to_beat_len = len(list(itertools.chain.from_iterable(unpacked_combo_to_beat)))
+							num_beat = unpacked_combo_len*unpacked_combo_to_beat_len 
+
+							if num_beat > k: continue # don't connect this # TODO: double check if this is correct??
+
+							# print("cur num beat: ", num_beat, colluder, unpacked_combo_to_beat, unpacked_combo_to_beat_len)
+
+							for unpacked_group in unpacked_combo:
+								for unpacked_group_to_beat in unpacked_combo_to_beat:
+									# print(unpacked_group, "beats ", unpacked_group_to_beat)
+
+									for i in range(len(unpacked_group)):
+										for j in range(len(unpacked_group_to_beat)):
+											non_colluders = np.array(unpacked_group[:i+1])
+											beaten_colluders = np.array(unpacked_group_to_beat[:j+1])
+
+											G[s+non_colluders][:, beaten_colluders] = False
+											# print(G[np.ix_((s+non_colluders), (beaten_colluders))]) # alternative way to access...
+
+											# build the new graph and append it
+											triu_inds = np.triu_indices(s+n, 1)
+											new_bits = "".join(str(i) for i in G[triu_inds].astype("uint8"))
+
+											connected_graphs.append(new_bits)
+											# clear out connections
+											G[:s, s:] = conn_zeros
+		# print("---------------------------------")
+	print(len(connected_graphs))
+	return connected_graphs
 
 def check_nodes_in_cycle(nodes, G):
 	stack = [nodes[0]]
@@ -394,7 +429,6 @@ def determine_groups(G, n):
 	new_group_num = np.max(degrees) + 1 
 
 	while True:
-		print(groups)
 		new_groups = {}
 		for k, v in groups.items():
 			nodes_beat = set() 
@@ -424,8 +458,6 @@ def determine_groups(G, n):
 		if len(new_groups) == 0: break
 		# update groups dict with new groups 
 		groups.update(new_groups)	
-		print("another update round", new_groups)
-	print("----------")
 	return groups
 
 if __name__ == "__main__":
@@ -435,12 +467,12 @@ if __name__ == "__main__":
 
 	n = args.n
 
-	# colluders = generate_graphs(3)
-	# graphs = generate_graphs(n-3)
+	colluders = generate_graphs(3)
+	graphs = generate_graphs(n-3)
 
-	# print(colluders)
+	print(colluders)
 
-	# graphs = connect_two_graphs(colluders, graphs, 9, n-3)
+	graphs = connect_two_graphs(colluders, graphs, 8, n-3)
 	
 	# # to help with fixing the groups
 	# graphs = generate_graphs(n)
