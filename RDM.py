@@ -92,21 +92,30 @@ def find_termination(graphs, manip, n, s):
 		gains.append(gain)
 
 		n += 1 # increase n
-		if n < 9:
+		if n < 8:
 			graphs, manip = get_all_graphs(n, s)
 		else: 
 			break
 		print("---------------------------------------")
 	
-	if n >= 9:
-		print("ON N>=9....")
-		graphs, manip = get_all_graphs_higher_nodes(n, s)
-		for bitgraph in tqdm(graphs+manip):
+	if n >= 8:
+		print("ON N>=%d...."%(n))
+		colluders = generate_graphs(3)
+		graphs = generate_graphs(n-3)
+
+		graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
+
+		for k, v in tqdm(manip.items()):
 			time.tic()
-			G = convert_binary_to_graph(bitgraph, n)
-			calculate_prob(bitgraph, G, n, ht)
+			G = convert_binary_to_graph(k, n)
+			calculate_prob(k, G, n, ht)
+
+			for bitgraph in v:
+				G = convert_binary_to_graph(bitgraph, n)
+				calculate_prob(bitgraph, G, n, ht)
 			time.toc()
-		gain = get_manipulability_higher_nodes(graphs, manips, n, ht, s)
+		gain = get_manipulability_higher_nodes(graphs, manip, n, ht, s)
+		print("GAIN FOR n = %d is %d " % (n, gain))
 
 	start = 4 
 	for gain in gains:
@@ -160,6 +169,12 @@ if __name__ == "__main__":
 		# print(ht["111111111111011"])
 		# diff = ht["111111111111011"][subset] - ht["110011111111111"][subset]
 		# print("diff: ", diff, np.sum(diff))
+		graph1 = '1000000100000000001011111111'
+		G = convert_binary_to_graph(graph1, n)
+		calculate_prob(graph1, G, n, ht)
+
+		# print(ht['1000000100000000001011111111'])
+		print(ht['1000000100000000001011111111'])
 
 	# 	draw_graph(graphs, n)
 
