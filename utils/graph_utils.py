@@ -85,27 +85,6 @@ def generate_graphs(n, unique=True):
 
 	return gentourng(n)
 
-def permute_probs(bg1, bg2, prob, n):
-	G1 = convert_binary_to_graph(bg1, n)
-	G2 = convert_binary_to_graph(bg2, n)
-
-	perms = list(itertools.permutations(np.arange(n)))[1:]
-
-	new_prob = np.zeros((n), dtype=np.float32)
-	P = np.zeros((n, n), dtype=np.uint8)
-	inds = np.arange(n)
-
-	for perm in perms:
-		P[inds, perm] = 1
-		if np.all(P @ (G1 @ P.T) == G2):
-			break
-		P[inds, perm] = 0 # reset
-	
-	# set the indices 
-	for i in range(n):
-		new_prob[i] = prob[perm[i]]
-	return new_prob
-
 def get_num_beat(bits, subset, n):
 	G = convert_binary_to_graph(bits, n)
 
@@ -259,74 +238,6 @@ def gentourng(n):
 	res = subprocess.check_output("./nauty27r1/gentourng %d" % n, shell=True)
 	return res.decode().splitlines()
 
-def get_all_graphs_higher_nodes(n, s=3):
-	m = n-s
-	bitgraphs = generate_graphs(m)
-	subsets = generate_graphs(s, unique=True)
-
-	final_graphs = []
-	manips = []
-
-	# now connect them
-	# actually need to do this in a loop up to 
-	for k in range(9):
-		conns = kbits(m*s, k)
-		for i in range(len(conns)):
-			# should technically ~conns[i] since 1 = win, 0 = beat...
-			arr = np.fromstring(conns[i], dtype='u1').reshape((s, m)) - ord('0')
-			conns[i] = ~arr # can convert it to ~conns[i] here
-		print("finished converting conns... for k = %d" %k)
-
-		zeros = np.zeros((m, m), dtype=np.bool_)
-		conns_zeros = np.zeros((s, m), dtype=np.bool_)
-		
-		# time = Timer()
-
-		for subset in subsets:
-			G = np.identity(n, dtype=np.bool_)
-			G[:s, :s] = convert_binary_to_graph(subset, s)
-			
-			for bitgraph in bitgraphs: 
-				# time.tic()
-				G[s:, s:] = convert_binary_to_graph(bitgraph, m)
-
-				for conn in conns:
-					
-					# technically should also set G[s:, :s]
-					# but it's okay bc of way graph is built 
-					G[:s, s:] = conn
-					
-					# build the new graph and append it
-					triu_inds = np.triu_indices(n, 1)
-					new_bits = "".join(str(i) for i in G[triu_inds].astype("uint8"))
-					if subset == subsets[-1]:
-						manips.append(new_bits)
-					else:
-						final_graphs.append(new_bits)
-					
-					
-					# clear out connections
-					G[:s, s:] = conns_zeros
-
-				# clears out the mxm graph for new mxm graph
-				G[s:, s:] = zeros
-				# time.toc()
-
-	# print("Total Time: %f sec" %time.total_time)
-	# print("Avg Time: %f sec per graph" %time.average_time)
-	print(len(final_graphs), len(manips))
-	return final_graphs, manips
-
-# taken from https://stackoverflow.com/questions/1851134/generate-all-binary-strings-of-length-n-with-k-bits-set
-def kbits(n, k):
-	result = []
-	for bits in itertools.combinations(range(n), k):
-		s = ['0'] * n
-		for bit in bits:
-			s[bit] = '1'
-		result.append(''.join(s))
-	return result
-
 def count_difference(bit1, bit2):
 	count = 0
 	for b1, b2 in zip(bit1, bit2):
@@ -354,11 +265,14 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 	for graph in graphs: 
 		G = np.ones((n+s, n+s), dtype=np.bool_)
 		G_manip = np.ones((n+s, n+s), dtype=np.bool_)
+		
 		# G = np.identity(n+s, dtype=np.bool_)
 		# G_manip = np.identity(n+s, dtype=np.bool_)
 
 		G[s:, s:] = convert_binary_to_graph(graph, n)
 		G_manip[s:, s:] = convert_binary_to_graph(graph, n)
+		# print("ORIGINAL", graph)
+		# print(G.astype('uint8'))
 
 		group = determine_groups(graph, n)
 		# print(graph, group)
@@ -387,7 +301,7 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 							unpacked_combo_to_beat_len = len(list(itertools.chain.from_iterable(unpacked_combo_to_beat)))
 							num_beat = unpacked_combo_len*unpacked_combo_to_beat_len 
 
-							if num_beat > k: continue # don't connect this # TODO: double check if this is correct??
+							if num_beat >= k: continue # don't connect this # TODO: double check if this is correct??
 
 							# print("cur num beat: ", num_beat, colluder, unpacked_combo_to_beat, unpacked_combo_to_beat_len)
 
@@ -399,11 +313,13 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 											non_colluders = np.array(unpacked_group[:i+1])
 											beaten_colluders = np.array(unpacked_group_to_beat[:j+1])
 
-											G[s+non_colluders][:, beaten_colluders] = True
-											G_manip[s+non_colluders][:, beaten_colluders] = True
-
-											G[beaten_colluders][:, s+non_colluders] = False 
-											G_manip[beaten_colluders][:, s+non_colluders] = False 
+											# G[beaten_colluders, s+non_colluders] = False 
+											G[np.ix_((beaten_colluders), (s+non_colluders))] = False
+											G_manip[np.ix_((beaten_colluders), (s+non_colluders))] = False
+											# G_manip[beaten_colluders, s+non_colluders] = False 
+											# G[s+non_colluders, beaten_colluders] = False
+											# G_manip[s+non_colluders][:, beaten_colluders] = ~G_manip[s+non_colluders][:, beaten_colluders] 
+											# print("????", G[s+non_colluders][:, beaten_colluders])
 
 											# build the new graph and append it
 											triu_inds = np.triu_indices(s+n, 1)
@@ -419,11 +335,15 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 													manip_connected_graphs[new_bits].add(manip_bits)
 											# print(G[np.ix_((s+non_colluders), (beaten_colluders))]) # alternative way to access...
 
-											
-											
-											# clear out connections
+											# print("BEFORE CLEAR")
+											# print("BEATEN COLLUDERS ARE ", beaten_colluders, "winners are", s+non_colluders)
+											# print(G.astype('uint8'))
+											# # clear out connections
 											G[:s, s:] = conn_zeros
 											G_manip[:s, s:] = conn_zeros
+											# print("AFTER CLEAR")
+											# print(G.astype('uint8'))
+											# print("------------")
 		# print("---------------------------------")
 	# print(len(connected_graphs))
 
@@ -520,10 +440,10 @@ if __name__ == "__main__":
 	# 	print(bitgraph)
 	
 	# # # to help with fixing the groups
-	# # graphs = generate_graphs(n)
-	# # groups = [determine_groups(G, n) for G in graphs]
-	# # for graph, group in zip(graphs, groups):
-	# # 	print(graph, ": ", group)
+	# graphs = generate_graphs(n)
+	# groups = [determine_groups(G, n) for G in graphs]
+	# for graph, group in zip(graphs, groups):
+	# 	print(graph, ": ", group)
 
 	# # G = "1100110111"
 	# # print(determine_groups(G, 5))
@@ -535,15 +455,15 @@ if __name__ == "__main__":
 	print(graphs)
 	# ht = {}
 
-	# for k, v in manip.items():
-	# 		# time.tic()
-	# 		G = convert_binary_to_graph(k, n)
-	# 		calculate_prob(k, G, n, ht)
+	# # for k, v in manip.items():
+	# # 		# time.tic()
+	# # 		G = convert_binary_to_graph(k, n)
+	# # 		calculate_prob(k, G, n, ht)
 
-	# 		for bitgraph in v:
-	# 			G = convert_binary_to_graph(bitgraph, n)
-	# 			calculate_prob(bitgraph, G, n, ht)
-	# 		# time.toc()
-	# gain = get_manipulability_higher_nodes(graphs, manip, n, ht, s)
-	# print("GAIN FOR n = %d is %d " % (n, gain))
+	# # 		for bitgraph in v:
+	# # 			G = convert_binary_to_graph(bitgraph, n)
+	# # 			calculate_prob(bitgraph, G, n, ht)
+	# # 		# time.toc()
+	# # gain = get_manipulability_higher_nodes(graphs, manip, n, ht, s)
+	# # print("GAIN FOR n = %d is %d " % (n, gain))
 
