@@ -219,19 +219,24 @@ def get_manipulability_higher_nodes(graphs, manips, n, ht, s=3):
 
 	maxGain = float('-inf')
 
-	# print(manips)
+	print(len(manips.values()), len(graphs))
 	for graph, v in manips.items():
 		for manip in v:
 			diff = ht[manip][subset] - ht[graph][subset]
 			# print("%s with manip %s" % (graph, manip))
 			# print(ht[manip])
 			# print(ht[graph])
-			print(diff)
-			# print("***************")
+			
 			gain = np.sum(diff)
+			
+			# print("***************")
+			
 			if gain > maxGain:
+				print(diff, gain, graph, manip)
 				# print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
 				maxGain = gain
+		# print("***************")
+	# print(maxGain)
 	return maxGain
 
 def gentourng(n):
@@ -246,7 +251,7 @@ def count_difference(bit1, bit2):
 	return count
 
 def connect_two_graphs(colluders, graphs, k, n, s=3):
-	connected_graphs = []
+	connected_graphs = set()
 	manip_connected_graphs = defaultdict(set)
 
 	colluding_groups = [determine_groups(G, s) for G in colluders]
@@ -257,100 +262,98 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 		for i in range(1, s+1):
 			combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
 		colluding_combos[G] = combos 
-	# print("COLLUDING COMBOS", colluding_combos)
-	all_colluders = generate_graphs(s, unique=False) # test
+	all_colluders = generate_graphs(s, unique=False) 
 	
-	conn_zeros = np.ones((s, n), dtype=np.bool_)
-	# conn_zeros = np.zeros((s, n), dtype=np.bool_)
+	conns = np.ones((s, n), dtype=np.bool_) # to clear the set nodes later on
 	for graph in graphs: 
 		G = np.ones((n+s, n+s), dtype=np.bool_)
 		G_manip = np.ones((n+s, n+s), dtype=np.bool_)
-		
-		# G = np.identity(n+s, dtype=np.bool_)
-		# G_manip = np.identity(n+s, dtype=np.bool_)
 
 		G[s:, s:] = convert_binary_to_graph(graph, n)
 		G_manip[s:, s:] = convert_binary_to_graph(graph, n)
-		# print("ORIGINAL", graph)
-		# print(G.astype('uint8'))
 
 		group = determine_groups(graph, n)
-		# print(graph, group)
 		group_combos = []
+
 		for i in range(1, n+1):
 			group_combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
 
+		# print("GROUP COMBOS for ", graph, group_combos)
+		# print("the groups...", group)
 
 		for combos in group_combos:
 			if not combos: continue
-			# print("COMBOSSSSS ", combos)
-			# unpacked_combo = list(itertools.chain(*combos[0]))
-			# print(list(itertools.chain(*combos[0])), list(itertools.chain.from_iterable(combos)))
+
 			for combo in combos:
 				(*unpacked_combo,) = combo
-				# print("unpacked: ", unpacked_combo)
-				unpacked_combo_len = len(list(itertools.chain.from_iterable(unpacked_combo)))
+				# print("unpacked combo before ", unpacked_combo, combo)
+				if len(unpacked_combo) > 1:
+					unpacked_combo.append(list(itertools.chain.from_iterable(unpacked_combo))) # <--- double check this later...
+				# print("UPDATED OTHER GRAPH UNPACKED ", unpacked_combo)
 
 				for colluder in colluders:
 					group_combos_to_beat = colluding_combos[colluder]
 					G[:s, :s] = convert_binary_to_graph(colluder, s) # set up colluder graph 
+
+					# one graph where NONE of colluders are beat
+					# print("GROUP COMBOS TO BEAAAAAAT ", group_combos_to_beat)
+					triu_inds = np.triu_indices(s+n, 1)
+					new_bits = "".join(str(b) for b in G[triu_inds].astype("uint8"))
+					connected_graphs.add(new_bits)
+
+					for manip in all_colluders: # test ??
+						if manip != colluder:
+							G_manip[:s, :s] = convert_binary_to_graph(manip, s)
+							manip_bits = "".join(str(b) for b in G_manip[triu_inds].astype("uint8"))
+							manip_connected_graphs[new_bits].add(manip_bits)
 					
 					for combos_to_beat in group_combos_to_beat:
 						for combo_to_beat in combos_to_beat:
 							(*unpacked_combo_to_beat,) = combo_to_beat
-							unpacked_combo_to_beat_len = len(list(itertools.chain.from_iterable(unpacked_combo_to_beat)))
-							num_beat = unpacked_combo_len*unpacked_combo_to_beat_len 
+							
+							for unpacked_group_to_beat in unpacked_combo_to_beat:
+								# print("TO BEAT ", unpacked_group_to_beat)
+								for unpacked_group in unpacked_combo:
+									# print("CURRENT UNPACKED GROUP ", unpacked_group)
+									for i in range(1, len(unpacked_group)+1):
+										for j in range(1, len(unpacked_group_to_beat)+1):
+											if i * j >= k: 
+												# print("CONTINUING...")
+												continue
+											non_colluders = np.array(unpacked_group[:i])
+											beaten_colluders = np.array(unpacked_group_to_beat[:j])
 
-							if num_beat >= k: continue # don't connect this # TODO: double check if this is correct??
-
-							# print("cur num beat: ", num_beat, colluder, unpacked_combo_to_beat, unpacked_combo_to_beat_len)
-
-							for unpacked_group in unpacked_combo:
-								for unpacked_group_to_beat in unpacked_combo_to_beat:
-									# print(unpacked_group, "beats ", unpacked_group_to_beat)
-									for i in range(len(unpacked_group)):
-										for j in range(len(unpacked_group_to_beat)):
-											non_colluders = np.array(unpacked_group[:i+1])
-											beaten_colluders = np.array(unpacked_group_to_beat[:j+1])
-
-											# G[beaten_colluders, s+non_colluders] = False 
 											G[np.ix_((beaten_colluders), (s+non_colluders))] = False
 											G_manip[np.ix_((beaten_colluders), (s+non_colluders))] = False
-											# G_manip[beaten_colluders, s+non_colluders] = False 
-											# G[s+non_colluders, beaten_colluders] = False
-											# G_manip[s+non_colluders][:, beaten_colluders] = ~G_manip[s+non_colluders][:, beaten_colluders] 
-											# print("????", G[s+non_colluders][:, beaten_colluders])
 
 											# build the new graph and append it
 											triu_inds = np.triu_indices(s+n, 1)
-											new_bits = "".join(str(i) for i in G[triu_inds].astype("uint8"))
-
-											connected_graphs.append(new_bits)
+											new_bits = "".join(str(b) for b in G[triu_inds].astype("uint8"))
+											connected_graphs.add(new_bits)
 
 											# build the manip graph
 											for manip in all_colluders: # test ??
 												if manip != colluder:
 													G_manip[:s, :s] = convert_binary_to_graph(manip, s)
-													manip_bits = "".join(str(i) for i in G_manip[triu_inds].astype("uint8"))
+													manip_bits = "".join(str(b) for b in G_manip[triu_inds].astype("uint8"))
 													manip_connected_graphs[new_bits].add(manip_bits)
-											# print(G[np.ix_((s+non_colluders), (beaten_colluders))]) # alternative way to access...
 
 											# print("BEFORE CLEAR")
 											# print("BEATEN COLLUDERS ARE ", beaten_colluders, "winners are", s+non_colluders)
+											# print(s+non_colluders, " beats ", beaten_colluders)
 											# print(G.astype('uint8'))
 											# # clear out connections
-											G[:s, s:] = conn_zeros
-											G_manip[:s, s:] = conn_zeros
+											G[:s, s:] = conns
+											G_manip[:s, s:] = conns
 											# print("AFTER CLEAR")
 											# print(G.astype('uint8'))
 											# print("------------")
-		# print("---------------------------------")
-	# print(len(connected_graphs))
+			# print("---------------------------------")
 
 	for k, v in manip_connected_graphs.items():
 		manip_connected_graphs[k] = list(v)
 
-	return connected_graphs, manip_connected_graphs
+	return list(connected_graphs), manip_connected_graphs
 
 def check_nodes_in_cycle(nodes, G):
 	stack = [nodes[0]]
@@ -452,7 +455,10 @@ if __name__ == "__main__":
 	graphs = generate_graphs(n-3)
 
 	graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
-	print(graphs)
+	# for k, v in manip.items():
+	# 	print(k, " : ", len(v), v)
+	# print(graphs)
+	# print(len(manip.keys()), len(manip.values()))
 	# ht = {}
 
 	# # for k, v in manip.items():

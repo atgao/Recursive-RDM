@@ -64,41 +64,61 @@ def calculate_prob(bits, G, n, ht={}):
 
 def find_termination(graphs, manip, n, s): 
 	gains = []
-	while graphs: 
-		print("Finished generating graphs")
-		print("%d unique graphs, %d manipulated graphs for n=%d" % (len(graphs), len(manip), n))
+	# while graphs: 
+	# 	print("Finished generating graphs")
+	# 	print("%d unique graphs, %d manipulated graphs for n=%d" % (len(graphs), len(manip), n))
 
 
-		ht = {}
-		time = Timer()
-		for bitgraph in tqdm(list(graphs.keys())+manip):
-			time.tic()
-			G = convert_binary_to_graph(bitgraph, n)
-			calculate_prob(bitgraph, G, n, ht)
-			time.toc()
+	# 	ht = {}
+	# 	time = Timer()
+	# 	for bitgraph in tqdm(list(graphs.keys())+manip):
+	# 		time.tic()
+	# 		G = convert_binary_to_graph(bitgraph, n)
+	# 		calculate_prob(bitgraph, G, n, ht)
+	# 		time.toc()
 		
-		# ordering for convience sake
-		ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
+	# 	# ordering for convience sake
+	# 	ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
 
-		# for k, v in ht.items():
-		# 	print(k, v)
+	# 	# for k, v in ht.items():
+	# 	# 	print(k, v)
 
-		print("%d entries in table" % len(ht))
-		print("Avg Time: %f sec per graph" %time.average_time)
-		print("Total Time: %f sec" %time.total_time)
+	# 	print("%d entries in table" % len(ht))
+	# 	print("Avg Time: %f sec per graph" %time.average_time)
+	# 	print("Total Time: %f sec" %time.total_time)
 		
-		gain = get_manipulability(graphs, n, ht, s=s)
-		print("Total gain for %d nodes: %f" %(n, gain))
-		gains.append(gain)
+	# 	gain = get_manipulability(graphs, n, ht, s=s)
+	# 	print("Total gain for %d nodes: %f" %(n, gain))
+	# 	gains.append(gain)
 
-		n += 1 # increase n
-		if n < 8:
-			graphs, manip = get_all_graphs(n, s)
-		else: 
-			break
-		print("---------------------------------------")
-	
-	if n >= 8:
+	# 	n += 1 # increase n
+	# 	if n < 9:
+	# 		graphs, manip = get_all_graphs(n, s)
+	# 	else: 
+	# 		break
+	# 	print("---------------------------------------")
+
+	# if n >= 9:
+	# 	print("ON N>=%d...."%(n))
+	# 	colluders = generate_graphs(3)
+	# 	graphs = generate_graphs(n-3)
+
+	# 	graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
+
+	# 	for k, v in tqdm(manip.items()):
+	# 		time.tic()
+	# 		G = convert_binary_to_graph(k, n)
+	# 		calculate_prob(k, G, n, ht)
+
+	# 		for bitgraph in v:
+	# 			G = convert_binary_to_graph(bitgraph, n)
+	# 			calculate_prob(bitgraph, G, n, ht)
+	# 		time.toc()
+	# 	gain = get_manipulability_higher_nodes(graphs, manip, n, ht, s)
+	# 	print("GAIN FOR n = %d is %f " % (n, gain))
+	start_n = n
+	ht = {}
+	for n in range(start_n, 11):
 		print("ON N>=%d...."%(n))
 		colluders = generate_graphs(3)
 		graphs = generate_graphs(n-3)
@@ -115,7 +135,8 @@ def find_termination(graphs, manip, n, s):
 				calculate_prob(bitgraph, G, n, ht)
 			time.toc()
 		gain = get_manipulability_higher_nodes(graphs, manip, n, ht, s)
-		print("GAIN FOR n = %d is %d " % (n, gain))
+		print("GAIN FOR n = %d is %f " % (n, gain))
+		break
 
 	start = 4 
 	for gain in gains:
@@ -159,23 +180,5 @@ if __name__ == "__main__":
 		
 		gain = get_manipulability(graphs, n, ht, s=s)
 		print("Total gain for %d nodes: %f" %(n, gain))
-
-		# subset = [0,3,4]
-		# print(ht["1100111111111111111111111111"])
-		# print(ht["1111111111111111110111111111"])
-		# diff = ht["1100111111111111111111111111"][subset] - ht["1100111111111111111111111111"][subset]
-		# print("diff: ", diff, np.sum(diff) )
-		# print(ht["110011111111111"])
-		# print(ht["111111111111011"])
-		# diff = ht["111111111111011"][subset] - ht["110011111111111"][subset]
-		# print("diff: ", diff, np.sum(diff))
-		graph1 = '1000000100000000001011111111'
-		G = convert_binary_to_graph(graph1, n)
-		calculate_prob(graph1, G, n, ht)
-
-		# print(ht['1000000100000000001011111111'])
-		print(ht['1000000100000000001011111111'])
-
-	# 	draw_graph(graphs, n)
 
 	
