@@ -394,25 +394,24 @@ def determine_groups(G, n):
 	while True:
 		new_groups = {}
 		for k, v in groups.items():
-			nodes_beat = set() 
-			# print(check_nodes_in_cycle(v, graph), groups)
-			# print("**************")
-			if len(v) > 1 and len(v) % 2 != 0 and check_nodes_in_cycle(v, graph) is True:
-				continue
+			# nodes_beat = set() 
 
-			losers = np.argwhere(graph[v[0]] == 1)[0] if len(np.argwhere(graph[v[0]] == 1)) > 0 else []
-			for l in losers: nodes_beat.add(l)
+			# if len(v) > 1 and len(v) % 2 != 0 and check_nodes_in_cycle(v, graph) is True:
+			# 	continue
+
+			losers = np.argwhere(graph[v[0]] == 1)[:, 0] if len(np.argwhere(graph[v[0]] == 1)) > 0 else []
+			# for l in losers: 
+			# 	nodes_beat.add(l)
+			nodes_beat = set(losers) - set(v)
+			# print()
+
 			new_group_nodes = []
 		
 			for node in v[1:]:
-				losers = np.argwhere(graph[node] == 1)[0]
-
-				for l in losers:
-					if l not in nodes_beat:
-						# split this into new group
-						new_group_nodes.append(node)
-						break 
-			
+				losers = np.argwhere(graph[node] == 1)[:, 0]
+				# if the losers to node aren't in the set or aren't one of the nodes already in the group
+				if set(losers) - set(v) != nodes_beat:
+					new_group_nodes.append(node)
 			# add new groups and fix old ones
 			if len(new_group_nodes) > 0:
 				groups[k] = list(set(v) - set(new_group_nodes))
@@ -421,7 +420,15 @@ def determine_groups(G, n):
 		
 		if len(new_groups) == 0: break
 		# update groups dict with new groups 
-		groups.update(new_groups)	
+		groups.update(new_groups)
+
+	# sanity check 
+	# for k, group in groups.items(): 
+	# 	all_nodes_beat = set(np.argwhere(graph[group[0]] == 1)[:, 0]) - set(group)
+	# 	for node in group[1:]:
+	# 		losers = np.argwhere(graph[node] == 1)[:, 0]	
+	# 		if set(losers) - set(group) != all_nodes_beat:
+	# 			print("ERRORRRRRRR on graph ", G)
 	return groups
 
 if __name__ == "__main__":
@@ -443,18 +450,18 @@ if __name__ == "__main__":
 	# 	print(bitgraph)
 	
 	# # # to help with fixing the groups
-	# graphs = generate_graphs(n)
-	# groups = [determine_groups(G, n) for G in graphs]
+	graphs = generate_graphs(n)
+	groups = [determine_groups(G, n) for G in graphs]
 	# for graph, group in zip(graphs, groups):
 	# 	print(graph, ": ", group)
 
 	# # G = "1100110111"
 	# # print(determine_groups(G, 5))
 
-	colluders = generate_graphs(3)
-	graphs = generate_graphs(n-3)
+	# colluders = generate_graphs(3)
+	# graphs = generate_graphs(n-3)
 
-	graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
+	# graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
 	# for k, v in manip.items():
 	# 	print(k, " : ", len(v), v)
 	# print(graphs)
