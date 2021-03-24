@@ -452,8 +452,8 @@ if __name__ == "__main__":
 	# # # to help with fixing the groups
 	graphs = generate_graphs(n)
 	groups = [determine_groups(G, n) for G in graphs]
-	# for graph, group in zip(graphs, groups):
-	# 	print(graph, ": ", group)
+	for graph, group in zip(graphs, groups):
+		print(graph, ": ", group)
 
 	# # G = "1100110111"
 	# # print(determine_groups(G, 5))
