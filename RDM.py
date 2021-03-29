@@ -118,12 +118,15 @@ def find_termination(graphs, manip, n, s):
 	# 	print("GAIN FOR n = %d is %f " % (n, gain))
 	start_n = n
 	ht = {}
-	for n in range(start_n, 11):
+	for n in range(start_n, 13):
 		print("ON N>=%d...."%(n))
 		colluders = generate_graphs(3)
 		graphs = generate_graphs(n-3)
 
+		time.tic()
 		graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
+		time.toc()
+		print("Total time to connect %fs" % time.total_time)
 
 		for k, v in tqdm(manip.items()):
 			time.tic()
@@ -138,7 +141,7 @@ def find_termination(graphs, manip, n, s):
 		print("GAIN FOR n = %d is %f " % (n, gain))
 		break
 
-	start = 4 
+	start = start_n 
 	for gain in gains:
 		print("Gained %f for n=%d" % (gain, start))
 		start += 1
@@ -150,9 +153,18 @@ if __name__ == "__main__":
 	parser.add_argument('-t', type=str, default="True")
 	args = parser.parse_args()
 
+
 	n, s, terminating = args.n, args.s, args.t
 	time = Timer()
-	graphs, manip = get_all_graphs(n, s)
+	if n < 9:
+		graphs, manip = get_all_graphs(n, s)
+	else: 
+		colluders = generate_graphs(3)
+		graphs = generate_graphs(n-3)
+		time.tic()
+		graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
+		time.toc()
+		print("Total time to connect %fs" % time.total_time)
 
 	if terminating.lower() == "true":
 		find_termination(graphs, manip, n, s)

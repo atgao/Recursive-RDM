@@ -12,9 +12,6 @@ import subprocess
 
 from collections import defaultdict
 
-# from timer import Timer
-
-
 def draw_graph(bitgraphs, n):
 
 	for i in range(len(bitgraphs)):
@@ -206,11 +203,11 @@ def get_manipulability(graphs, n, ht, s=3):
 				diff = new_prob[list(subset)] - cur[list(subset)] 
 				gain = np.sum(diff) # np.max instead??
 				if gain > maxGain:
-					print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
-					print("current graph ", bits, ht[bits])
-					print("manipulated graph ", new_key, ht[new_key])
-					print("diff: ", diff, gain)
-					print("-------------")
+					# print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
+					# print("current graph ", bits, ht[bits])
+					# print("manipulated graph ", new_key, ht[new_key])
+					# print("diff: ", diff, gain)
+					# print("-------------")
 					maxGain = gain
 	return maxGain
 
@@ -223,20 +220,11 @@ def get_manipulability_higher_nodes(graphs, manips, n, ht, s=3):
 	for graph, v in manips.items():
 		for manip in v:
 			diff = ht[manip][subset] - ht[graph][subset]
-			# print("%s with manip %s" % (graph, manip))
-			# print(ht[manip])
-			# print(ht[graph])
-			
+
 			gain = np.sum(diff)
 			
-			# print("***************")
-			
 			if gain > maxGain:
-				print(diff, gain, graph, manip)
-				# print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
 				maxGain = gain
-		# print("***************")
-	# print(maxGain)
 	return maxGain
 
 def gentourng(n):
@@ -263,7 +251,10 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 			combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
 		colluding_combos[G] = combos 
 	all_colluders = generate_graphs(s, unique=False) 
-	
+
+	# print(colluding_groups)
+	# print("colluding combos: ", colluding_combos)
+
 	conns = np.ones((s, n), dtype=np.bool_) # to clear the set nodes later on
 	for graph in graphs: 
 		G = np.ones((n+s, n+s), dtype=np.bool_)
@@ -276,17 +267,13 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 		group_combos = []
 
 		for i in range(1, n+1):
-			group_combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
-
-		# print("GROUP COMBOS for ", graph, group_combos)
-		# print("the groups...", group)
+			group_combos.append(list(itertools.combinations(group.values(), i)))
 
 		for combos in group_combos:
 			if not combos: continue
 
-			for combo in combos:
+			for combo in combos: # further unpacks the combo again
 				(*unpacked_combo,) = combo
-				# print("unpacked combo before ", unpacked_combo, combo)
 				if len(unpacked_combo) > 1:
 					unpacked_combo.append(list(itertools.chain.from_iterable(unpacked_combo))) # <--- double check this later...
 				# print("UPDATED OTHER GRAPH UNPACKED ", unpacked_combo)
@@ -308,9 +295,13 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 							manip_connected_graphs[new_bits].add(manip_bits)
 					
 					for combos_to_beat in group_combos_to_beat:
-						for combo_to_beat in combos_to_beat:
+						# print("COMBOS TO BEAT ", combos_to_beat)
+						if not combos_to_beat: continue
+						for combo_to_beat in combos_to_beat: # further unpack the combos 
 							(*unpacked_combo_to_beat,) = combo_to_beat
-							
+							if len(unpacked_combo_to_beat) > 1:
+								unpacked_combo_to_beat.append(list(itertools.chain.from_iterable(unpacked_combo_to_beat)))
+							# print("unbacked combos to beat ", unpacked_combo_to_beat)
 							for unpacked_group_to_beat in unpacked_combo_to_beat:
 								# print("TO BEAT ", unpacked_group_to_beat)
 								for unpacked_group in unpacked_combo:
@@ -338,11 +329,7 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 													manip_bits = "".join(str(b) for b in G_manip[triu_inds].astype("uint8"))
 													manip_connected_graphs[new_bits].add(manip_bits)
 
-											# print("BEFORE CLEAR")
-											# print("BEATEN COLLUDERS ARE ", beaten_colluders, "winners are", s+non_colluders)
-											# print(s+non_colluders, " beats ", beaten_colluders)
-											# print(G.astype('uint8'))
-											# # clear out connections
+											# print(s+non_colluders, " beats ", beaten_colluders, " with graph ", new_bits)
 											G[:s, s:] = conns
 											G_manip[:s, s:] = conns
 											# print("AFTER CLEAR")
@@ -355,24 +342,6 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 
 	return list(connected_graphs), manip_connected_graphs
 
-def check_nodes_in_cycle(nodes, G):
-	stack = [nodes[0]]
-	nodes = set(nodes[1:])
-	
-	while stack:
-		# print(stack)
-		curr = stack.pop() 
-		wins = np.argwhere(G[curr] == 1).tolist() if len(np.argwhere(G[curr] == 1)) > 0 else []
-		# print("wins: ", np.argwhere(G[curr] == 1), wins)
-
-		for w in wins:
-			if w[0] in nodes:
-				stack.append(w[0])
-				nodes.remove(w[0])
-		if len(nodes) == 0: 
-			return True 
-	return False
-
 def determine_groups(G, n):
 	# 1. start by partitioning sets by degree 
 	graph = convert_binary_to_graph(G, n)
@@ -384,9 +353,7 @@ def determine_groups(G, n):
 		group = groups.get(degree, [])
 		group.append(node)
 		groups[degree] = group 
-	
-	# print(G, groups)
-	
+		
 	# 3. refine groups
 	np.fill_diagonal(graph, 0) # do this to help with indexing later
 	new_group_num = np.max(degrees) + 1 
@@ -394,16 +361,8 @@ def determine_groups(G, n):
 	while True:
 		new_groups = {}
 		for k, v in groups.items():
-			# nodes_beat = set() 
-
-			# if len(v) > 1 and len(v) % 2 != 0 and check_nodes_in_cycle(v, graph) is True:
-			# 	continue
-
 			losers = np.argwhere(graph[v[0]] == 1)[:, 0] if len(np.argwhere(graph[v[0]] == 1)) > 0 else []
-			# for l in losers: 
-			# 	nodes_beat.add(l)
 			nodes_beat = set(losers) - set(v)
-			# print()
 
 			new_group_nodes = []
 		
@@ -412,6 +371,7 @@ def determine_groups(G, n):
 				# if the losers to node aren't in the set or aren't one of the nodes already in the group
 				if set(losers) - set(v) != nodes_beat:
 					new_group_nodes.append(node)
+
 			# add new groups and fix old ones
 			if len(new_group_nodes) > 0:
 				groups[k] = list(set(v) - set(new_group_nodes))
@@ -428,7 +388,7 @@ def determine_groups(G, n):
 	# 	for node in group[1:]:
 	# 		losers = np.argwhere(graph[node] == 1)[:, 0]	
 	# 		if set(losers) - set(group) != all_nodes_beat:
-	# 			print("ERRORRRRRRR on graph ", G)
+	# 			print("ERROR on graph ", G)
 	return groups
 
 if __name__ == "__main__":
@@ -438,22 +398,23 @@ if __name__ == "__main__":
 
 	n = args.n
 
-	# colluders = generate_graphs(3)
-	# graphs = generate_graphs(n-3)
+	colluders = generate_graphs(3)
+	graphs = generate_graphs(n-3)
 
-	# # print(colluders)
+	# print(colluders)
 
-	# graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
-	# print(len(graphs))
+	graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
+	print(len(graphs))
+	print(graphs)
 
 	# for bitgraph in graphs+list(manip.values()):
 	# 	print(bitgraph)
 	
 	# # # to help with fixing the groups
-	graphs = generate_graphs(n)
-	groups = [determine_groups(G, n) for G in graphs]
-	for graph, group in zip(graphs, groups):
-		print(graph, ": ", group)
+	# graphs = generate_graphs(n)
+	# groups = [determine_groups(G, n) for G in graphs]
+	# for graph, group in zip(graphs, groups):
+	# 	print(graph, ": ", group)
 
 	# # G = "1100110111"
 	# # print(determine_groups(G, 5))
