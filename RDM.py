@@ -182,6 +182,7 @@ if __name__ == "__main__":
 		
 		# ordering for convience sake
 		ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
+		print(len(list(graphs.keys())+manip))
 
 		# for k, v in ht.items():
 		# 	print(k, v)
