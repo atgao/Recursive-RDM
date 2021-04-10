@@ -201,13 +201,8 @@ def get_manipulability(graphs, n, ht, s=3):
 				
 				new_prob = ht[new_key]
 				diff = new_prob[list(subset)] - cur[list(subset)] 
-				gain = np.sum(diff) # np.max instead??
+				gain = np.sum(diff) 
 				if gain > maxGain:
-					# print("maxgain: %f, gain:%f, manip %s for subset %s" % (maxGain, gain, sb, subset))
-					# print("current graph ", bits, ht[bits])
-					# print("manipulated graph ", new_key, ht[new_key])
-					# print("diff: ", diff, gain)
-					# print("-------------")
 					maxGain = gain
 	return maxGain
 
@@ -215,8 +210,7 @@ def get_manipulability_higher_nodes(graphs, manips, n, ht, s=3):
 	subset = [i for i in range(s)]
 
 	maxGain = float('-inf')
-
-	print(len(manips.values()), len(graphs))
+	
 	for graph, v in manips.items():
 		for manip in v:
 			diff = ht[manip][subset] - ht[graph][subset]
