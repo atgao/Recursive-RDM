@@ -157,7 +157,7 @@ if __name__ == "__main__":
 	n, s, terminating = args.n, args.s, args.t
 	time = Timer()
 	if n < 9:
-		graphs, manip = get_all_graphs(n, s)
+		graphs = get_all_graphs(n, s)
 	else: 
 		colluders = generate_graphs(3)
 		graphs = generate_graphs(n-3)
@@ -170,24 +170,32 @@ if __name__ == "__main__":
 		find_termination(graphs, manip, n, s)
 	else:
 		print("Finished generating graphs")
-		print("%d unique graphs, %d manipulated graphs for n=%d" % (len(graphs), len(manip), n))
+		print("%d unique graphs for n=%d" % (len(graphs), n))
 
 		ht = {}
 		time = Timer()
-		for bitgraph in tqdm(list(graphs.keys())+manip):
+		count = 0
+		for bitgraph, subsets in tqdm(graphs.items()):
 			time.tic()
 			G = convert_binary_to_graph(bitgraph, n)
 			calculate_prob(bitgraph, G, n, ht)
+
+			count += 1
+			
+			for subset, manips in subsets.items():
+				for manip in manips:
+					G = convert_binary_to_graph(manip, n)
+					calculate_prob(manip, G, n, ht)
+					count += 1
+
 			time.toc()
 		
 		# ordering for convience sake
 		ht = collections.OrderedDict(sorted(ht.items(), key=lambda x:len(x[0])))
-		print(len(list(graphs.keys())+manip))
+		print(count)
 
 		# for k, v in ht.items():
 		# 	print(k, v)
-
-		print("%d entries in table" % len(ht))
 		print("Avg Time: %f sec per graph" %time.average_time)
 		print("Total Time: %f sec" %time.total_time)
 		

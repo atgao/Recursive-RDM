@@ -94,8 +94,7 @@ def get_num_beat(bits, subset, n):
 
 def get_all_graphs(n, s=3):
 	bitgraphs = generate_graphs(n)
-	graphs_and_subsets = collections.defaultdict(list)
-	manip = []
+	graphs_and_subsets = collections.defaultdict(lambda: collections.defaultdict(list))
 	
 	inds = np.arange(n)
 	subsets = list(itertools.combinations(inds, s))
@@ -108,10 +107,12 @@ def get_all_graphs(n, s=3):
 	count = s-1
 
 	for bits in bitgraphs:
+		# graphs_and_subsets[bits] = collections.defaultdict(list)
+
 		for subset in subsets:
 			if get_num_beat(bits, subset, n) > 9:
 				continue
-			graphs_and_subsets[bits].append(subset) # consider these subsets for the graph
+			# consider these subsets for the graph
 			
 			# form the originally colluding nodes
 			orig_colluding = []
@@ -137,70 +138,27 @@ def get_all_graphs(n, s=3):
 				
 				# stricter checks to eliminate graphs
 				manip_diff = count_difference(orig_colluding, sb)
-				if manip_diff == 3 and get_num_beat(new_key, subset, n) > 9:
+				bad_matches = get_num_beat(new_key, subset, n)
+				if manip_diff == 3 and bad_matches > 9:
 					continue 
-				if manip_diff == 2 and get_num_beat(new_key, subset, n) > 6:
+				if manip_diff == 2 and bad_matches > 6:
 					continue 
-				if manip_diff == 1 and get_num_beat(new_key, subset, n) > 3: 
+				if manip_diff == 1 and bad_matches > 3: 
 					continue
-				manip.append(new_key)
-	return graphs_and_subsets, manip
+				# new_key is manipulation
+				graphs_and_subsets[bits][subset].append(new_key)
+	return graphs_and_subsets
 
 def get_manipulability(graphs, n, ht, s=3):
-	inds = np.arange(n)
-	subsets = list(itertools.combinations(inds, s)) 
-	
 	# current graphs for n
-	bitgraphs = graphs
-
-	# ways the subset can manipulate 
-	if s == 2:
-		subset_bitgraphs = generate_graphs(s)
-	else:
-		subset_bitgraphs = generate_graphs(s, unique=False)
-		# subset_bitgraphs = generate_graphs(s)
-	count = s-1
-
 	maxGain = float('-inf')
 
-	for bits in bitgraphs:
+	for bits, subsets in graphs.items():
 		cur = ht[bits] # the current probability
-		for subset in bitgraphs[bits]: # only use subsets we know satisfy conditions
-			
-			# form the originally colluding nodes
-			orig_colluding = []
-			for s in subset:
-				orig_colluding.append(bits[s])
-			orig_colluding = "".join(orig_colluding)
-
-			for sb in subset_bitgraphs: # tries all possible manipulations
-
-				manipulation = list(bits)
-				i, j = 0, 1 # keep track of which indices so can access matches
-				for match in sb:
-
-					u, v = subset[i], subset[j]
-					idx = get_idx_for_match(u, v, n)
-					manipulation[idx] = match
-					j += 1
-					if j > count:
-						i += 1
-						j = i + 1 
-
-				# now get new prob
-				new_key = "".join(manipulation)
-
-				# stricter checks to eliminate graphs
-				manip_diff = count_difference(orig_colluding, sb)
-				if manip_diff == 3 and get_num_beat(new_key, subset, n) > 9:
-					continue 
-				if manip_diff == 2 and get_num_beat(new_key, subset, n) > 6:
-					continue 
-				if manip_diff == 1 and get_num_beat(new_key, subset, n) > 3: 
-					continue
-				
-				new_prob = ht[new_key]
-				diff = new_prob[list(subset)] - cur[list(subset)] 
+		for k, manips in subsets.items():
+			for manip in manips:
+				new_prob = ht[manip]
+				diff = new_prob[list(k)] - cur[list(k)] 
 				gain = np.sum(diff) 
 				if gain > maxGain:
 					maxGain = gain
@@ -210,7 +168,7 @@ def get_manipulability_higher_nodes(graphs, manips, n, ht, s=3):
 	subset = [i for i in range(s)]
 
 	maxGain = float('-inf')
-	
+
 	for graph, v in manips.items():
 		for manip in v:
 			diff = ht[manip][subset] - ht[graph][subset]
@@ -245,9 +203,6 @@ def connect_two_graphs(colluders, graphs, k, n, s=3):
 			combos.append(list(itertools.combinations(group.values(), i))) # TODO: make sure to go thru keys
 		colluding_combos[G] = combos 
 	all_colluders = generate_graphs(s, unique=False) 
-
-	# print(colluding_groups)
-	# print("colluding combos: ", colluding_combos)
 
 	conns = np.ones((s, n), dtype=np.bool_) # to clear the set nodes later on
 	for graph in graphs: 
@@ -392,46 +347,19 @@ if __name__ == "__main__":
 
 	n = args.n
 
-	colluders = generate_graphs(3)
-	graphs = generate_graphs(n-3)
-
-	# print(colluders)
-
-	graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
-	print(len(graphs))
-	print(graphs)
-
-	# for bitgraph in graphs+list(manip.values()):
-	# 	print(bitgraph)
-	
-	# # # to help with fixing the groups
-	# graphs = generate_graphs(n)
-	# groups = [determine_groups(G, n) for G in graphs]
-	# for graph, group in zip(graphs, groups):
-	# 	print(graph, ": ", group)
-
-	# # G = "1100110111"
-	# # print(determine_groups(G, 5))
-
 	# colluders = generate_graphs(3)
-	# graphs = generate_graphs(n-3)
+	# graphs = generate_graphs(n)
+	# print(graphs, len(graphs))
 
-	# graphs, manip = connect_two_graphs(colluders, graphs, 8, n-3)
-	# for k, v in manip.items():
-	# 	print(k, " : ", len(v), v)
-	# print(graphs)
-	# print(len(manip.keys()), len(manip.values()))
-	# ht = {}
 
-	# # for k, v in manip.items():
-	# # 		# time.tic()
-	# # 		G = convert_binary_to_graph(k, n)
-	# # 		calculate_prob(k, G, n, ht)
+	graphs = get_all_graphs(n)
 
-	# # 		for bitgraph in v:
-	# # 			G = convert_binary_to_graph(bitgraph, n)
-	# # 			calculate_prob(bitgraph, G, n, ht)
-	# # 		# time.toc()
-	# # gain = get_manipulability_higher_nodes(graphs, manip, n, ht, s)
-	# # print("GAIN FOR n = %d is %d " % (n, gain))
+	# print(graphs.keys(), len(graphs.keys()))
+	# print(graphs.values())
 
+	for bit, subsets in graphs.items():
+		# print(graphs[bit])
+		for subset, manips in subsets.items():
+			print(manips)
+		# print(subset)
+		print("-----------")
