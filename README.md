@@ -1,17 +1,17 @@
 # Recursive-RDM
-Code for senior thesis
+Code for senior thesis evaluating recursive tournament rules
 
-## TODO:
-* implement timing tests to find bottleneck in code
-* ~~check if one graph is a permutation of another~~
-* check what is taking up the most memory/how to reduce that
-* ~~timing tests to compare not checking permutation + checking permutation + generating graphs~~
-* ~~implement termination condition on code ??~~
+## Requirements
+- Python 3.5+
+- numpy
 
-## Notes:
-* ~~takes ~ 2.5 hrs to calculate all probabilities on n=7~~
-* ~~23767 s --> 6.6 hrs generate all unique graphs on n=7~~
-  * ~~now 234 s with further optimization~~
-* probability of each match in RSEB with dummy players ??
-* after n = 10 no more graphs with weighted sum > 9
-* is there a way to somehow cut down on # manipulated graphs??
+## Running the code
+- run `python RDM.py -n [n] -s [s] -t [True/False]` in the main directory
+- `n` is the starting number of nodes for the graph (default `n=4`)
+- `s` is the number of colluders (defaul `s=3`)
+- to run RDM on only graphs of size `n`, give the False argument for `t`
+- the current algorithm will automatically increment until `n=10`
+
+
+## Notes 
+There were a few minor issues with getting the `nauty` package (to use `gentourng`) to work on WSL/Ubuntu. Make sure that everything inside the `\nauty27r1` folder has executable permissions.
